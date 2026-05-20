@@ -1,10 +1,54 @@
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import SignupActionButtons from "../components/SignupActionButtons";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+
+const DEFAULT_STAFF_DISCORD_IDS = [
+  "1250359974853345401", // Alessandro / live_football_sgs
+];
+
+function getStaffIds() {
+  const envIds = (process.env.STAFF_DISCORD_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  return new Set([...DEFAULT_STAFF_DISCORD_IDS, ...envIds]);
+}
+
+function getSessionDiscordId(session: any) {
+  return String(
+    session?.user?.id ||
+      session?.user?.discord_id ||
+      session?.user?.discordId ||
+      session?.user?.sub ||
+      ""
+  );
+}
+
+async function requireStaff() {
+  const session = await getServerSession(authOptions as any);
+
+  if (!session) {
+    redirect("/api/auth/signin?callbackUrl=/staff");
+  }
+
+  const discordId = getSessionDiscordId(session);
+  const staffIds = getStaffIds();
+
+  if (!discordId || !staffIds.has(discordId)) {
+    redirect("/");
+  }
+
+  return session;
+}
 
 async function getRequests() {
   const { data, error } = await supabase
@@ -121,6 +165,8 @@ function UserColumn({
 }
 
 export default async function StaffPage() {
+  await requireStaff();
+
   const requests = await getRequests();
   const analytics = await getAnalytics();
 
