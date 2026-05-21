@@ -4,6 +4,7 @@ type NewsItem = {
   source: string;
   pubDate: string;
   description: string;
+  image?: string;
 };
 
 type StandingRow = {
@@ -27,20 +28,39 @@ const GOOGLE_NEWS_RSS =
 
 export const revalidate = 300;
 
-function cleanText(value: string) {
+function decodeHtml(value: string) {
   return String(value || "")
     .replace(/<!\[CDATA\[/g, "")
     .replace(/\]\]>/g, "")
-    .replace(/<[^>]*>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+}
+
+function cleanText(value: string) {
+  return decodeHtml(value)
+    .replace(/<a\b[^>]*>.*?<\/a>/gis, "")
+    .replace(/<font\b[^>]*>.*?<\/font>/gis, "")
+    .replace(/<img\b[^>]*>/gis, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 function extractTag(item: string, tag: string) {
   const match = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
   return cleanText(match?.[1] || "");
+}
+
+function shortTitle(title: string) {
+  return String(title || "")
+    .replace(/\s-\s[^-]{2,35}$/g, "")
+    .replace(/\s\|\s[^|]{2,35}$/g, "")
+    .trim();
 }
 
 async function getFootballNews(): Promise<NewsItem[]> {
@@ -53,13 +73,22 @@ async function getFootballNews(): Promise<NewsItem[]> {
     const xml = await response.text();
     const items = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
 
-    return items.slice(0, 12).map((item) => ({
-      title: extractTag(item, "title"),
-      link: extractTag(item, "link"),
-      source: extractTag(item, "source") || "Google News",
-      pubDate: extractTag(item, "pubDate"),
-      description: extractTag(item, "description"),
-    }));
+    return items.slice(0, 14).map((item) => {
+      const rawTitle = extractTag(item, "title");
+      const title = shortTitle(rawTitle);
+      const description = cleanText(extractTag(item, "description"));
+
+      return {
+        title,
+        link: extractTag(item, "link"),
+        source: extractTag(item, "source") || "Google News",
+        pubDate: extractTag(item, "pubDate"),
+        description:
+          description && description.length > 35
+            ? description
+            : "Apri la notizia completa per leggere tutti i dettagli aggiornati dalla fonte.",
+      };
+    });
   } catch {
     return [];
   }
@@ -86,7 +115,7 @@ async function getStandings(): Promise<StandingRow[]> {
   const data = await footballDataFetch("/competitions/SA/standings");
   const table = data?.standings?.[0]?.table || [];
 
-  return table.slice(0, 12).map((row: any) => ({
+  return table.slice(0, 10).map((row: any) => ({
     position: row.position,
     team: row.team?.shortName || row.team?.name || "N/D",
     points: row.points || 0,
@@ -97,7 +126,7 @@ async function getMatches(): Promise<MatchItem[]> {
   const data = await footballDataFetch("/matches");
   const matches = data?.matches || [];
 
-  return matches.slice(0, 10).map((match: any) => {
+  return matches.slice(0, 8).map((match: any) => {
     const homeScore = match.score?.fullTime?.home;
     const awayScore = match.score?.fullTime?.away;
 
@@ -123,17 +152,17 @@ function getTheme(news: NewsItem[]) {
   if (text.includes("mondiale") || text.includes("world cup")) {
     return {
       label: "Speciale Mondiale",
-      title: "Il mondo del calcio è in modalità Mondiale",
-      bg: "from-sky-500/25 via-emerald-500/15 to-black",
+      title: "Il calcio mondiale, le notizie più calde",
+      bg: "from-sky-500/30 via-emerald-400/15 to-black",
       icon: "🌍",
     };
   }
 
   if (text.includes("champions")) {
     return {
-      label: "Notte Champions",
-      title: "Champions League in primo piano",
-      bg: "from-blue-600/25 via-indigo-500/15 to-black",
+      label: "Champions Night",
+      title: "Champions League e grandi serate europee",
+      bg: "from-blue-700/35 via-indigo-500/15 to-black",
       icon: "🏆",
     };
   }
@@ -141,8 +170,8 @@ function getTheme(news: NewsItem[]) {
   if (text.includes("mercato") || text.includes("trasferimento") || text.includes("colpo")) {
     return {
       label: "Calciomercato Live",
-      title: "Trattative, colpi e ultime notizie",
-      bg: "from-lime-400/25 via-emerald-500/15 to-black",
+      title: "Colpi, trattative e ultime di mercato",
+      bg: "from-lime-400/30 via-emerald-500/15 to-black",
       icon: "💰",
     };
   }
@@ -150,7 +179,7 @@ function getTheme(news: NewsItem[]) {
   return {
     label: "Football News",
     title: "News calcistiche live",
-    bg: "from-lime-400/20 via-emerald-500/10 to-black",
+    bg: "from-lime-400/25 via-emerald-500/10 to-black",
     icon: "⚽",
   };
 }
@@ -181,8 +210,17 @@ function newsCategory(title: string) {
   if (lower.includes("mondiale") || lower.includes("world cup")) return "MONDIALE";
   if (lower.includes("serie a")) return "SERIE A";
   if (lower.includes("ufficiale")) return "UFFICIALE";
+  if (lower.includes("infortun")) return "INFORTUNIO";
 
   return "NEWS";
+}
+
+function categoryStyle(category: string) {
+  if (category === "COLPO DI MERCATO") return "bg-yellow-300 text-black";
+  if (category === "CHAMPIONS") return "bg-blue-400 text-black";
+  if (category === "MONDIALE") return "bg-sky-300 text-black";
+  if (category === "UFFICIALE") return "bg-red-500 text-white";
+  return "bg-lime-400 text-black";
 }
 
 export default async function CalcioPage() {
@@ -193,6 +231,7 @@ export default async function CalcioPage() {
   ]);
 
   const theme = getTheme(news);
+  const mainNews = news[0];
   const hasFootballApi = Boolean(process.env.FOOTBALL_DATA_API_KEY);
 
   const tickerItems =
@@ -206,49 +245,83 @@ export default async function CalcioPage() {
         ];
 
   return (
-    <main className="min-h-screen bg-[#030504] text-white">
-      <section className={`relative overflow-hidden border-b border-lime-400/20 bg-gradient-to-br ${theme.bg} px-6 py-20`}>
-        <div className="absolute left-[-160px] top-[-160px] h-[460px] w-[460px] rounded-full bg-lime-400/20 blur-[150px]" />
-        <div className="absolute bottom-[-180px] right-[-140px] h-[460px] w-[460px] rounded-full bg-emerald-500/15 blur-[150px]" />
+    <main className="min-h-screen bg-[#020403] text-white">
+      <section className={`relative overflow-hidden border-b border-lime-400/20 bg-gradient-to-br ${theme.bg} px-6 py-16 md:py-24`}>
+        <div className="absolute left-[-160px] top-[-160px] h-[520px] w-[520px] rounded-full bg-lime-400/20 blur-[160px]" />
+        <div className="absolute bottom-[-200px] right-[-120px] h-[520px] w-[520px] rounded-full bg-emerald-500/15 blur-[160px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(255,255,255,0.10),transparent_26%)]" />
 
-        <div className="relative z-10 mx-auto max-w-7xl">
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="rounded-2xl border border-lime-400/40 bg-black/40 px-5 py-3 text-3xl">
-              {theme.icon}
-            </span>
-
-            <div>
-              <p className="text-sm font-black uppercase tracking-[0.4em] text-lime-400">
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-10 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-lime-400/30 bg-black/40 px-5 py-3 backdrop-blur">
+              <span className="text-3xl">{theme.icon}</span>
+              <span className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
                 {theme.label}
-              </p>
-              <h1 className="mt-3 max-w-5xl text-5xl font-black leading-none md:text-7xl">
-                {theme.title}
-              </h1>
+              </span>
+            </div>
+
+            <h1 className="max-w-5xl text-5xl font-black leading-none md:text-7xl">
+              {theme.title}
+            </h1>
+
+            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
+              News calcistiche prese online, aggiornate automaticamente e mostrate senza link sporchi:
+              titolo, anteprima articolo, fonte e pulsante per leggere l’articolo completo.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+              <a
+                href={DISCORD_LIVE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="animate-pulse rounded-2xl bg-red-500 px-8 py-4 text-center text-lg font-black text-white shadow-[0_0_35px_rgba(239,68,68,0.65)] transition hover:scale-105 hover:bg-red-400"
+              >
+                🔴 LIVE ENTRA
+              </a>
+
+              <a
+                href="#news"
+                className="rounded-2xl border border-lime-400/40 bg-lime-400/10 px-8 py-4 text-center font-black text-lime-300 transition hover:bg-lime-400 hover:text-black"
+              >
+                VEDI LE NEWS
+              </a>
             </div>
           </div>
 
-          <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
-            Notizie prese online, risultati, classifiche e aggiornamenti calcio.
-            La pagina cambia atmosfera automaticamente in base alle notizie più importanti.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+          {mainNews && (
             <a
-              href={DISCORD_LIVE_URL}
+              href={mainNews.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="animate-pulse rounded-2xl bg-red-500 px-8 py-4 text-center text-lg font-black text-white shadow-[0_0_35px_rgba(239,68,68,0.65)] transition hover:scale-105 hover:bg-red-400"
+              className="group relative overflow-hidden rounded-[2.5rem] border border-lime-400/25 bg-black/55 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:border-lime-400 hover:shadow-[0_0_70px_rgba(132,204,22,0.20)]"
             >
-              🔴 LIVE ENTRA
-            </a>
+              <div className="absolute right-[-100px] top-[-100px] h-[280px] w-[280px] rounded-full bg-lime-400/20 blur-[100px]" />
 
-            <a
-              href="#news"
-              className="rounded-2xl border border-lime-400/40 bg-lime-400/10 px-8 py-4 text-center font-black text-lime-300 transition hover:bg-lime-400 hover:text-black"
-            >
-              VEDI NEWS
+              <div className="relative z-10">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <span className={`rounded-full px-4 py-2 text-xs font-black ${categoryStyle(newsCategory(mainNews.title))}`}>
+                    {newsCategory(mainNews.title)}
+                  </span>
+
+                  <span className="text-xs font-bold text-zinc-400">
+                    {mainNews.source} • {formatDate(mainNews.pubDate)}
+                  </span>
+                </div>
+
+                <h2 className="text-3xl font-black leading-tight md:text-5xl">
+                  {mainNews.title}
+                </h2>
+
+                <p className="mt-5 line-clamp-5 text-lg leading-relaxed text-zinc-300">
+                  {mainNews.description}
+                </p>
+
+                <div className="mt-8 inline-flex rounded-2xl bg-lime-400 px-6 py-4 font-black text-black transition group-hover:scale-105">
+                  LEGGI ARTICOLO COMPLETO
+                </div>
+              </div>
             </a>
-          </div>
+          )}
         </div>
       </section>
 
@@ -256,84 +329,91 @@ export default async function CalcioPage() {
         <div className="flex w-max animate-[marquee_28s_linear_infinite] gap-12 whitespace-nowrap px-6 text-sm font-black uppercase tracking-[0.25em] text-lime-300">
           {[...tickerItems, ...tickerItems].map((item: any, index) => (
             <span key={`${item.link}-${index}`}>
-              {newsCategory(item.title)}: {item.title}
+              {newsCategory(item.title)}: {shortTitle(item.title)}
             </span>
           ))}
         </div>
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-8 px-6 py-12 xl:grid-cols-[1.35fr_0.9fr]">
-        <div id="news" className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+        <div id="news" className="rounded-[2.5rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
           <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
-                Tendina news
+                News a tendina
               </p>
-              <h2 className="mt-3 text-4xl font-black">Ultime dal web</h2>
+              <h2 className="mt-3 text-4xl font-black">Ultime notizie</h2>
             </div>
 
             <span className="rounded-full border border-white/10 bg-black/40 px-4 py-2 text-sm text-zinc-400">
-              Aggiornamento automatico ogni 5 min
+              Aggiornamento ogni 5 min
             </span>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid gap-4">
             {news.length === 0 && (
               <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-6 text-orange-100">
                 Non riesco a caricare le news in questo momento.
               </div>
             )}
 
-            {news.map((item, index) => (
-              <details
-                key={`${item.link}-${index}`}
-                className="group rounded-2xl border border-white/10 bg-black/45 p-5 transition hover:border-lime-400/40"
-                open={index === 0}
-              >
-                <summary className="cursor-pointer list-none">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <div className="mb-3 flex flex-wrap items-center gap-3">
-                        <span className="rounded-full bg-lime-400 px-3 py-1 text-xs font-black text-black">
-                          {newsCategory(item.title)}
-                        </span>
-                        <span className="text-xs font-bold text-zinc-500">
-                          {item.source} • {formatDate(item.pubDate)}
-                        </span>
+            {news.slice(1).map((item, index) => {
+              const category = newsCategory(item.title);
+
+              return (
+                <details
+                  key={`${item.link}-${index}`}
+                  className="group overflow-hidden rounded-[2rem] border border-white/10 bg-black/45 transition hover:border-lime-400/40"
+                >
+                  <summary className="cursor-pointer list-none p-5">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0">
+                        <div className="mb-3 flex flex-wrap items-center gap-3">
+                          <span className={`rounded-full px-3 py-1 text-xs font-black ${categoryStyle(category)}`}>
+                            {category}
+                          </span>
+                          <span className="text-xs font-bold text-zinc-500">
+                            {item.source} • {formatDate(item.pubDate)}
+                          </span>
+                        </div>
+
+                        <h3 className="text-2xl font-black leading-tight">
+                          {item.title}
+                        </h3>
+
+                        <p className="mt-3 line-clamp-2 text-zinc-400">
+                          {item.description}
+                        </p>
                       </div>
 
-                      <h3 className="text-2xl font-black leading-tight">
-                        {item.title}
-                      </h3>
+                      <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-lime-300 transition group-open:bg-lime-400 group-open:text-black">
+                        APRI
+                      </span>
                     </div>
+                  </summary>
 
-                    <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-lime-300">
-                      APRI
-                    </span>
+                  <div className="border-t border-white/10 bg-black/35 p-5">
+                    <p className="max-w-4xl text-lg leading-relaxed text-zinc-200">
+                      {item.description}
+                    </p>
+
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-6 inline-flex rounded-2xl bg-lime-400 px-5 py-3 text-sm font-black text-black transition hover:scale-105"
+                    >
+                      LEGGI ARTICOLO COMPLETO
+                    </a>
                   </div>
-                </summary>
-
-                <div className="mt-5 border-t border-white/10 pt-5">
-                  <p className="leading-relaxed text-zinc-300">
-                    {item.description || "Apri la fonte per leggere la notizia completa."}
-                  </p>
-
-                  <a
-                    href={item.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-5 inline-flex rounded-2xl bg-lime-400 px-5 py-3 text-sm font-black text-black transition hover:scale-105"
-                  >
-                    LEGGI FONTE
-                  </a>
-                </div>
-              </details>
-            ))}
+                </details>
+              );
+            })}
           </div>
         </div>
 
         <aside className="space-y-8">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
             <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
               Classifica
             </p>
@@ -367,7 +447,7 @@ export default async function CalcioPage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
             <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
               Risultati live
             </p>
@@ -402,7 +482,7 @@ export default async function CalcioPage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-red-400/30 bg-red-500/10 p-6">
+          <div className="rounded-[2rem] border border-red-400/30 bg-red-500/10 p-6 backdrop-blur-xl">
             <p className="text-xs font-black uppercase tracking-[0.35em] text-red-300">
               Diretta community
             </p>
