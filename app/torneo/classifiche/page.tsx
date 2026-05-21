@@ -69,7 +69,7 @@ export default async function ClassifichePage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-5">
             <Image
-              src="/bc-logo.png"
+              src="/logo-bordo-campo.png"
               alt="BC"
               width={70}
               height={70}
