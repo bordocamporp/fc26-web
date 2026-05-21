@@ -10,8 +10,7 @@ const slides = [
     title: "ISCRIZIONE TORNEO BC FC",
     subtitle:
       "Partecipa al torneo ufficiale FC26 Bordo Campo. Squadre, mercato, staff e dashboard manager.",
-    image:
-      "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1800",
+    image: "/slides/torneo-fc26.jpg",
     logo: "/logo-bc-fc.png",
     button: "/iscrizione",
     buttonText: "ISCRIVITI ORA",
@@ -20,8 +19,7 @@ const slides = [
     title: "BORDO CAMPO DISCORD",
     subtitle:
       "Entra nella community ufficiale per seguire LIVE, aggiornamenti, tornei e contenuti gaming.",
-    image:
-      "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1800",
+    image: "/slides/bordo-campo-discord.jpg",
     logo: "/logo-bordo-campo.png",
     button: "https://discord.gg/WJXXcGr2J3",
     buttonText: "ENTRA NEL DISCORD",
@@ -30,8 +28,7 @@ const slides = [
     title: "FIVEM REAL RP",
     subtitle:
       "Vivi l'esperienza roleplay definitiva nel server Real RP targato Bordo Campo.",
-    image:
-      "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1800",
+    image: "/slides/server-rp.jpg",
     logo: "/logo-rp.png",
     button: "https://discord.gg/FF7HbtXZ7k",
     buttonText: "SCOPRI REAL RP",
