@@ -203,13 +203,29 @@ export default async function ManagerPage() {
 
   const bestPlayer = roster[0];
 
+  const roleGroups: Record<string, string[]> = {
+    PORTIERI: ["GK", "POR"],
+    DIFENSORI: ["CB", "LB", "RB", "LWB", "RWB", "DC", "TS", "TD", "DIF"],
+    CENTROCAMPISTI: ["CDM", "CM", "CAM", "LM", "RM", "MCO", "CDC", "CC", "CEN"],
+    ATTACCANTI: ["ST", "CF", "LW", "RW", "LF", "RF", "ATT", "AS", "AD", "P"],
+  };
+
   const roleCounts = roster.reduce(
     (acc: Record<string, number>, p: any) => {
-      const pos = String(p.position || "ALTRO").toUpperCase();
-      acc[pos] = (acc[pos] || 0) + 1;
+      const pos = String(p.position || "").toUpperCase();
+      const group =
+        Object.entries(roleGroups).find(([, positions]) => positions.includes(pos))?.[0] ||
+        "ALTRO";
+
+      acc[group] = (acc[group] || 0) + 1;
       return acc;
     },
-    {}
+    {
+      PORTIERI: 0,
+      DIFENSORI: 0,
+      CENTROCAMPISTI: 0,
+      ATTACCANTI: 0,
+    }
   );
 
   return (
@@ -306,7 +322,7 @@ export default async function ManagerPage() {
                 </p>
 
                 <div className="mt-6 space-y-3">
-                  {Object.entries(roleCounts).slice(0, 12).map(([role, count]) => (
+                  {Object.entries(roleCounts).map(([role, count]) => (
                     <div
                       key={role}
                       className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3"
