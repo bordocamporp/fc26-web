@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import SignupActionButtons from "../components/SignupActionButtons";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
+export const dynamic = "force-dynamic";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -25,12 +27,12 @@ function getStaffIds() {
 
 function getSessionDiscordId(session: any) {
   return String(
-    session?.user?.id ||
+    session?.user?.discordId ||
       session?.user?.discord_id ||
-      session?.user?.discordId ||
+      session?.user?.id ||
       session?.user?.sub ||
       ""
-  );
+  ).trim();
 }
 
 async function requireStaff() {
