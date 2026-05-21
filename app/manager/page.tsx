@@ -319,7 +319,7 @@ export default async function ManagerPage() {
 
                 <div className="mt-6 space-y-4">
                   <ManagerSideButton
-                    href="/classifiche"
+                    href="/torneo/classifiche"
                     title="CLASSIFICHE"
                     description="Visualizza la classifica aggiornata del torneo."
                     icon="trophy"
