@@ -9,7 +9,7 @@ const slides = [
   {
     title: "ISCRIZIONE TORNEO BC FC",
     subtitle:
-      "Partecipa al torneo ufficiale FC26 Bordo Campo. Squadre, mercato, staff e dashboard manager.",
+      "Partecipa al torneo ufficiale FC26 Bordo Campo. Squadre, mercato e dashboard manager.",
     image: "/slides/torneo-fc26.jpg",
     logo: "/logo-bc-fc.png",
     button: "/iscrizione",
@@ -41,7 +41,6 @@ const navItems = [
   ["Calcio", "/calcio"],
   ["Gaming", "/gaming"],
   ["Discord", "https://discord.gg/WJXXcGr2J3"],
-  ["Staff", "/staff"],
 ];
 
 const cards = [
