@@ -10,12 +10,6 @@ type StandingRow = {
   position: number;
   team: string;
   points: number;
-  played: number;
-  won: number;
-  draw: number;
-  lost: number;
-  goalsFor: number;
-  goalsAgainst: number;
 };
 
 type MatchItem = {
@@ -24,22 +18,12 @@ type MatchItem = {
   score: string;
   status: string;
   competition: string;
-  date: string;
 };
 
 const DISCORD_LIVE_URL = "https://discord.gg/WJXXcGr2J3";
 
 const GOOGLE_NEWS_RSS =
   "https://news.google.com/rss/search?q=calcio%20OR%20calciomercato%20OR%20Serie%20A%20OR%20Champions%20League%20when:1d&hl=it&gl=IT&ceid=IT:it";
-
-const COMPETITIONS = [
-  { code: "SA", name: "Serie A" },
-  { code: "PL", name: "Premier League" },
-  { code: "PD", name: "Liga" },
-  { code: "BL1", name: "Bundesliga" },
-  { code: "FL1", name: "Ligue 1" },
-  { code: "CL", name: "Champions League" },
-];
 
 export const revalidate = 300;
 
@@ -63,96 +47,72 @@ async function getFootballNews(): Promise<NewsItem[]> {
   try {
     const response = await fetch(GOOGLE_NEWS_RSS, {
       next: { revalidate: 300 },
-      headers: {
-        "User-Agent": "BordoCampoNews/1.0",
-      },
+      headers: { "User-Agent": "BordoCampoNews/1.0" },
     });
 
     const xml = await response.text();
     const items = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
 
-    return items.slice(0, 12).map((item) => {
-      const title = extractTag(item, "title");
-      const link = extractTag(item, "link");
-      const pubDate = extractTag(item, "pubDate");
-      const description = extractTag(item, "description");
-      const source = extractTag(item, "source") || "Google News";
-
-      return {
-        title,
-        link,
-        source,
-        pubDate,
-        description,
-      };
-    });
-  } catch (error) {
-    console.error("Errore caricamento news calcio:", error);
+    return items.slice(0, 12).map((item) => ({
+      title: extractTag(item, "title"),
+      link: extractTag(item, "link"),
+      source: extractTag(item, "source") || "Google News",
+      pubDate: extractTag(item, "pubDate"),
+      description: extractTag(item, "description"),
+    }));
+  } catch {
     return [];
   }
 }
 
 async function footballDataFetch(path: string) {
   const token = process.env.FOOTBALL_DATA_API_KEY;
-
   if (!token) return null;
 
   try {
     const response = await fetch(`https://api.football-data.org/v4${path}`, {
       next: { revalidate: 600 },
-      headers: {
-        "X-Auth-Token": token,
-      },
+      headers: { "X-Auth-Token": token },
     });
 
     if (!response.ok) return null;
-
     return await response.json();
-  } catch (error) {
-    console.error("Errore football-data:", error);
+  } catch {
     return null;
   }
 }
 
-async function getStandings(competitionCode = "SA"): Promise<StandingRow[]> {
-  const data = await footballDataFetch(`/competitions/${competitionCode}/standings`);
-
+async function getStandings(): Promise<StandingRow[]> {
+  const data = await footballDataFetch("/competitions/SA/standings");
   const table = data?.standings?.[0]?.table || [];
 
   return table.slice(0, 12).map((row: any) => ({
     position: row.position,
     team: row.team?.shortName || row.team?.name || "N/D",
     points: row.points || 0,
-    played: row.playedGames || 0,
-    won: row.won || 0,
-    draw: row.draw || 0,
-    lost: row.lost || 0,
-    goalsFor: row.goalsFor || 0,
-    goalsAgainst: row.goalsAgainst || 0,
   }));
 }
 
 async function getMatches(): Promise<MatchItem[]> {
   const data = await footballDataFetch("/matches");
-
   const matches = data?.matches || [];
 
   return matches.slice(0, 10).map((match: any) => {
-    const home = match.homeTeam?.shortName || match.homeTeam?.name || "Casa";
-    const away = match.awayTeam?.shortName || match.awayTeam?.name || "Trasferta";
     const homeScore = match.score?.fullTime?.home;
     const awayScore = match.score?.fullTime?.away;
 
     return {
-      homeTeam: home,
-      awayTeam: away,
+      homeTeam: match.homeTeam?.shortName || match.homeTeam?.name || "Casa",
+      awayTeam: match.awayTeam?.shortName || match.awayTeam?.name || "Trasferta",
       score:
-        homeScore !== null && awayScore !== null && homeScore !== undefined && awayScore !== undefined
+        homeScore !== null &&
+        awayScore !== null &&
+        homeScore !== undefined &&
+        awayScore !== undefined
           ? `${homeScore} - ${awayScore}`
           : "VS",
       status: match.status || "SCHEDULED",
       competition: match.competition?.name || "Calcio",
-      date: match.utcDate || "",
     };
   });
 }
@@ -220,7 +180,6 @@ function newsCategory(title: string) {
   if (lower.includes("champions")) return "CHAMPIONS";
   if (lower.includes("mondiale") || lower.includes("world cup")) return "MONDIALE";
   if (lower.includes("serie a")) return "SERIE A";
-  if (lower.includes("infortun")) return "INFORTUNIO";
   if (lower.includes("ufficiale")) return "UFFICIALE";
 
   return "NEWS";
@@ -229,12 +188,22 @@ function newsCategory(title: string) {
 export default async function CalcioPage() {
   const [news, standings, matches] = await Promise.all([
     getFootballNews(),
-    getStandings("SA"),
+    getStandings(),
     getMatches(),
   ]);
 
   const theme = getTheme(news);
   const hasFootballApi = Boolean(process.env.FOOTBALL_DATA_API_KEY);
+
+  const tickerItems =
+    news.length > 0
+      ? news.slice(0, 8)
+      : [
+          { title: "NEWS CALCIO LIVE", link: "1" },
+          { title: "MERCATO", link: "2" },
+          { title: "RISULTATI", link: "3" },
+          { title: "CLASSIFICHE", link: "4" },
+        ];
 
   return (
     <main className="min-h-screen bg-[#030504] text-white">
@@ -260,7 +229,7 @@ export default async function CalcioPage() {
 
           <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
             Notizie prese online, risultati, classifiche e aggiornamenti calcio.
-            La pagina cambia atmosfera automaticamente in base alle notizie più importanti del momento.
+            La pagina cambia atmosfera automaticamente in base alle notizie più importanti.
           </p>
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -283,34 +252,14 @@ export default async function CalcioPage() {
         </div>
       </section>
 
-      <section className="border-y border-lime-400/20 bg-lime-400/10 py-4">
+      <section className="overflow-hidden border-y border-lime-400/20 bg-lime-400/10 py-4">
         <div className="flex w-max animate-[marquee_28s_linear_infinite] gap-12 whitespace-nowrap px-6 text-sm font-black uppercase tracking-[0.25em] text-lime-300">
-          {news.length > 0 ? (
-            news.slice(0, 8).map((item) => (
-              <span key={item.link}>
-                {newsCategory(item.title)}: {item.title}
-              </span>
-            ))
-          ) : (
-            <>
-              <span>NEWS CALCIO LIVE</span>
-              <span>MERCATO</span>
-              <span>RISULTATI</span>
-              <span>CLASSIFICHE</span>
-            </>
-          )}
+          {[...tickerItems, ...tickerItems].map((item: any, index) => (
+            <span key={`${item.link}-${index}`}>
+              {newsCategory(item.title)}: {item.title}
+            </span>
+          ))}
         </div>
-
-        <style jsx>{`
-          @keyframes marquee {
-            0% {
-              transform: translateX(0);
-            }
-            100% {
-              transform: translateX(-50%);
-            }
-          }
-        `}</style>
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-8 px-6 py-12 xl:grid-cols-[1.35fr_0.9fr]">
@@ -331,7 +280,7 @@ export default async function CalcioPage() {
           <div className="space-y-4">
             {news.length === 0 && (
               <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-6 text-orange-100">
-                Non riesco a caricare le news in questo momento. Riprova dopo il deploy o controlla la connessione server.
+                Non riesco a caricare le news in questo momento.
               </div>
             )}
 
@@ -385,24 +334,20 @@ export default async function CalcioPage() {
 
         <aside className="space-y-8">
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
-                  Classifica
-                </p>
-                <h2 className="mt-3 text-3xl font-black">Serie A</h2>
-              </div>
-            </div>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+              Classifica
+            </p>
+            <h2 className="mt-3 text-3xl font-black">Serie A</h2>
 
             {!hasFootballApi && (
-              <div className="mb-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4 text-sm text-orange-100">
-                Per classifiche reali aggiungi su Vercel la variabile:
+              <div className="my-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4 text-sm text-orange-100">
+                Per classifiche reali aggiungi su Vercel:
                 <br />
                 <b>FOOTBALL_DATA_API_KEY</b>
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="mt-5 space-y-2">
               {standings.length === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-black/40 p-5 text-zinc-400">
                   Classifica non disponibile.
@@ -476,25 +421,6 @@ export default async function CalcioPage() {
             </a>
           </div>
         </aside>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-6 pb-16">
-        <div className="rounded-[2rem] border border-lime-400/20 bg-lime-400/10 p-6">
-          <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
-            Campionati supportati
-          </p>
-
-          <div className="mt-5 flex flex-wrap gap-3">
-            {COMPETITIONS.map((competition) => (
-              <span
-                key={competition.code}
-                className="rounded-full border border-white/10 bg-black/40 px-5 py-3 text-sm font-black"
-              >
-                {competition.name}
-              </span>
-            ))}
-          </div>
-        </div>
       </section>
     </main>
   );
