@@ -98,8 +98,8 @@ export default async function TorneoPage() {
       <div className="fixed right-[-180px] top-[220px] h-[520px] w-[520px] rounded-full bg-emerald-500/10 blur-[170px]" />
       <div className="fixed bottom-[-200px] left-[35%] h-[440px] w-[440px] rounded-full bg-cyan-400/10 blur-[160px]" />
 
-      <header className="relative z-20 border-b border-lime-400/20 bg-black/75 px-6 py-5 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1700px] items-center justify-between gap-6">
+      <header className="relative z-20 border-b border-lime-400/20 bg-black/75 px-4 md:px-6 py-5 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1700px] flex-col gap-4 md:flex-row md:items-center md:justify-between gap-4 md:p-6">
           <a href="/" className="flex items-center gap-4">
             <Image
               src="/logo-bordo-campo.png"
@@ -110,10 +110,10 @@ export default async function TorneoPage() {
             />
 
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.45em] text-lime-400">
+              <p className="text-xs font-black uppercase tracking-[0.25em] md:tracking-[0.45em] text-lime-400">
                 Bordo Campo
               </p>
-              <h1 className="text-3xl font-black uppercase tracking-widest">
+              <h1 className="text-base md:text-xl md:text-3xl font-black uppercase tracking-widest">
                 Torneo Hub
               </h1>
             </div>
@@ -141,19 +141,19 @@ export default async function TorneoPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(132,204,22,0.24),transparent_32%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-lime-400/10 via-black/40 to-black" />
 
-        <div className="relative z-10 mx-auto grid max-w-[1700px] items-center gap-10 px-6 py-16 xl:grid-cols-[1fr_430px]">
+        <div className="relative z-10 mx-auto grid max-w-[1700px] items-center gap-4 md:p-6 md:p-10 px-4 md:px-6 py-8 md:py-10 md:py-16 xl:grid-cols-[1fr_430px]">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.45em] text-lime-400">
+            <p className="text-sm font-black uppercase tracking-[0.25em] md:tracking-[0.45em] text-lime-400">
               Bordo Campo Official Tournament
             </p>
 
-            <h2 className="mt-5 text-6xl font-black leading-none md:text-8xl">
+            <h2 className="mt-5 text-2xl md:text-4xl md:text-6xl font-black leading-none md:text-base md:text-xl md:text-3xl md:text-5xl md:text-8xl">
               TORNEO
               <br />
               BC FC
             </h2>
 
-            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
+            <p className="mt-6 max-w-3xl text-base md:text-lg leading-relaxed text-zinc-300">
               Dashboard centrale del torneo FC26: iscrizioni, club assegnati,
               mercato, classifiche, calendario, risultati e gestione live della
               competizione.
@@ -169,14 +169,14 @@ export default async function TorneoPage() {
             <div className="mt-10 flex flex-wrap gap-4">
               <a
                 href="/torneo/mercato"
-                className="rounded-2xl bg-lime-400 px-8 py-4 font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105"
+                className="rounded-2xl bg-lime-400 px-5 py-4 md:px-4 md:px-8 font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105"
               >
                 APRI MERCATO
               </a>
 
               <a
                 href="/iscrizione"
-                className="rounded-2xl border border-white/15 bg-white/10 px-8 py-4 font-black backdrop-blur transition hover:border-lime-400 hover:text-lime-300"
+                className="rounded-2xl border border-white/15 bg-white/10 px-5 py-4 md:px-4 md:px-8 font-black backdrop-blur transition hover:border-lime-400 hover:text-lime-300"
               >
                 ISCRIVITI AL TORNEO
               </a>
@@ -185,7 +185,7 @@ export default async function TorneoPage() {
 
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-lime-400/30 blur-[90px]" />
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-lime-400/25 bg-black/50 p-8 shadow-[0_0_80px_rgba(132,204,22,0.12)] backdrop-blur-xl">
+            <div className="relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] md:rounded-[2.5rem] border border-lime-400/25 bg-black/50 p-5 md:p-8 shadow-[0_0_80px_rgba(132,204,22,0.12)] backdrop-blur-xl">
               <Image
                 src="/logo-bc-fc.png"
                 alt="BC FC"
@@ -196,10 +196,10 @@ export default async function TorneoPage() {
               />
 
               <div className="mt-6 rounded-3xl border border-lime-400/20 bg-lime-400/10 p-5">
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+                <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                   Stato competizione
                 </p>
-                <p className="mt-3 text-3xl font-black">
+                <p className="mt-3 text-base md:text-xl md:text-3xl font-black">
                   Iscrizioni aperte
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">
@@ -212,10 +212,10 @@ export default async function TorneoPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto grid max-w-[1700px] gap-8 px-6 py-10 xl:grid-cols-[320px_1fr]">
+      <section className="relative z-10 mx-auto grid max-w-[1700px] gap-5 md:p-8 px-4 md:px-6 py-8 md:py-10 xl:grid-cols-[320px_1fr]">
         <aside className="space-y-6">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+          <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 md:p-6 backdrop-blur-xl">
+            <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
               Torneo Menu
             </p>
 
@@ -237,22 +237,22 @@ export default async function TorneoPage() {
           </PanelCard>
         </aside>
 
-        <div className="grid gap-8">
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-5 md:p-8">
+          <div className="grid gap-4 md:p-6 md:grid-cols-2 xl:grid-cols-4">
             <StatCard title="Accettati" value={accepted} color="text-lime-400" />
             <StatCard title="In attesa" value={pending} color="text-orange-400" />
             <StatCard title="Rifiutati" value={rejected} color="text-red-400" />
             <StatCard title="Volume mercato" value={marketVolume} color="text-cyan-400" />
           </div>
 
-          <section className="grid gap-8 xl:grid-cols-[1fr_430px]">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-xl">
+          <section className="grid gap-5 md:p-8 xl:grid-cols-[1fr_430px]">
+            <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-7 backdrop-blur-xl">
               <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                     Hub operativo
                   </p>
-                  <h3 className="mt-2 text-4xl font-black">
+                  <h3 className="mt-2 text-2xl md:text-4xl font-black">
                     Sezioni torneo
                   </h3>
                 </div>
@@ -262,7 +262,7 @@ export default async function TorneoPage() {
                 </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FeatureCard
                   href="/torneo/mercato"
                   title="Mercato"
@@ -298,7 +298,7 @@ export default async function TorneoPage() {
                       key={a.id}
                       className="rounded-2xl border border-white/10 bg-black/35 p-4"
                     >
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between gap-3">
                         <div>
                           <p className="font-black">Asta #{a.id}</p>
                           <p className="mt-1 text-xs text-zinc-500">
@@ -328,14 +328,14 @@ export default async function TorneoPage() {
             </PanelCard>
           </section>
 
-          <section className="grid gap-8 xl:grid-cols-[1fr_430px]">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-xl">
-              <div className="mb-7 flex items-end justify-between">
+          <section className="grid gap-5 md:p-8 xl:grid-cols-[1fr_430px]">
+            <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-7 backdrop-blur-xl">
+              <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                     Registrazioni
                   </p>
-                  <h3 className="mt-2 text-4xl font-black">
+                  <h3 className="mt-2 text-2xl md:text-4xl font-black">
                     Iscrizioni recenti
                   </h3>
                 </div>
@@ -461,7 +461,7 @@ function HeroMetric({
       <p className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500">
         {title}
       </p>
-      <p className={`mt-3 text-3xl font-black ${colors[tone]}`}>
+      <p className={`mt-3 text-base md:text-xl md:text-3xl font-black ${colors[tone]}`}>
         {value}
       </p>
     </div>
@@ -478,13 +478,13 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-xl transition hover:-translate-y-1 hover:border-lime-400/50 hover:shadow-[0_0_45px_rgba(132,204,22,0.14)]">
-      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-lime-400/10 blur-2xl transition group-hover:bg-lime-400/20" />
+    <div className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-7 backdrop-blur-xl transition hover:-translate-y-1 hover:border-lime-400/50 hover:shadow-[0_0_45px_rgba(132,204,22,0.14)]">
+      <div className="absolute -right-10 -top-4 md:p-6 md:p-10 h-32 w-32 rounded-full bg-lime-400/10 blur-2xl transition group-hover:bg-lime-400/20" />
       <p className="relative z-10 text-sm font-black uppercase tracking-[0.25em] text-zinc-500">
         {title}
       </p>
 
-      <p className={`relative z-10 mt-4 text-6xl font-black ${color}`}>
+      <p className={`relative z-10 mt-4 text-2xl md:text-4xl md:text-6xl font-black ${color}`}>
         {value}
       </p>
     </div>
@@ -528,7 +528,7 @@ function FeatureCard({
   return (
     <a
       href={href}
-      className="group relative overflow-hidden rounded-[2rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/10 via-white/[0.03] to-black p-6 transition duration-300 hover:-translate-y-1 hover:border-lime-300 hover:shadow-[0_0_40px_rgba(132,204,22,0.18)]"
+      className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/10 via-white/[0.03] to-black p-4 md:p-6 transition duration-300 hover:-translate-y-1 hover:border-lime-300 hover:shadow-[0_0_40px_rgba(132,204,22,0.18)]"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(132,204,22,0.20),transparent_45%)] opacity-80" />
       <div className="relative z-10 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-lime-400/35 bg-black/55">
@@ -554,8 +554,8 @@ function PanelCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-      <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+    <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 md:p-6 backdrop-blur-xl">
+      <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
         {title}
       </p>
 
@@ -575,7 +575,7 @@ function ProgressRow({
 }) {
   return (
     <div className="mb-5 last:mb-0">
-      <div className="mb-2 flex items-center justify-between text-sm">
+      <div className="mb-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-sm">
         <span className="font-bold text-zinc-300">{label}</span>
         <span className="font-black text-lime-400">{value}%</span>
       </div>
