@@ -50,8 +50,6 @@ const cards = [
     desc: "Classifiche, calendario, rose, mercato e competizioni FC26.",
     visual: "from-lime-400/40 via-emerald-500/20 to-black",
     badge: "FC26",
-    button: "/torneo",
-    buttonText: "TORNEO",
   },
   {
     title: "CALCIO",
@@ -72,6 +70,7 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -113,8 +112,8 @@ export default function Home() {
             : "bg-transparent py-6"
         }`}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6">
-          <a href="/" className="flex items-center gap-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 md:px-6">
+          <a href="/" className="flex items-center gap-2 md:gap-4">
             <Image
               src="/logo-bordo-campo.png"
               alt="Bordo Campo"
@@ -123,7 +122,7 @@ export default function Home() {
             />
 
             <div>
-              <h1 className="text-xl font-black tracking-[0.2em]">
+              <h1 className="text-sm font-black tracking-[0.15em] md:text-xl md:tracking-[0.2em]">
                 BORDO CAMPO
               </h1>
 
@@ -193,7 +192,66 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          <button
+            onClick={() => setMobileMenuOpen((value) => !value)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-xl font-black text-lime-400 backdrop-blur lg:hidden"
+            aria-label="Apri menu"
+          >
+            {mobileMenuOpen ? "×" : "☰"}
+          </button>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="mx-auto mt-4 max-w-7xl px-4 lg:hidden">
+            <div className="rounded-[1.5rem] border border-lime-400/20 bg-black/90 p-4 shadow-[0_0_40px_rgba(132,204,22,0.12)] backdrop-blur-2xl">
+              <nav className="grid gap-2">
+                {navItems.map(([label, href]) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target={String(href).startsWith("http") ? "_blank" : undefined}
+                    rel={String(href).startsWith("http") ? "noopener noreferrer" : undefined}
+                    className="rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-wider text-white/80 transition hover:bg-lime-400 hover:text-black"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {label}
+                  </a>
+                ))}
+              </nav>
+
+              <div className="mt-4 grid gap-3 border-t border-white/10 pt-4">
+                {authLoaded && (
+                  <a
+                    href={session?.user ? "/manager" : "/iscrizione"}
+                    className="rounded-2xl bg-lime-400 px-5 py-3 text-center text-sm font-black text-black"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {session?.user ? "AREA MANAGER" : "ISCRIVITI AL TORNEO FC"}
+                  </a>
+                )}
+
+                {authLoaded && !session?.user && (
+                  <button
+                    onClick={() => signIn("discord", { callbackUrl: "/" })}
+                    className="rounded-2xl border border-[#5865F2]/50 bg-[#5865F2]/20 px-5 py-3 text-sm font-black text-white"
+                  >
+                    LOGIN DISCORD
+                  </button>
+                )}
+
+                {authLoaded && session?.user && (
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="rounded-2xl border border-red-400/30 bg-red-400/10 px-5 py-3 text-sm font-black text-red-300"
+                  >
+                    LOGOUT
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       <section className="relative min-h-screen">
@@ -207,26 +265,26 @@ export default function Home() {
 
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(132,204,22,0.18),transparent_35%)]" />
 
-        <div className="relative z-10 mx-auto grid min-h-screen max-w-7xl items-center gap-12 px-6 pt-28 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="relative z-10 mx-auto grid min-h-screen max-w-7xl items-center gap-12 px-4 pt-24 md:px-6 md:pt-28 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <p className="mb-5 text-sm font-black uppercase tracking-[0.45em] text-lime-400">
               Live Esports Portal
             </p>
 
-            <h2 className="max-w-4xl text-6xl font-black leading-none md:text-8xl">
+            <h2 className="max-w-4xl text-4xl font-black leading-none sm:text-5xl md:text-7xl lg:text-8xl">
               {current.title}
             </h2>
 
-            <p className="mt-8 max-w-xl text-xl leading-relaxed text-zinc-300">
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-300 md:mt-8 md:text-xl">
               {current.subtitle}
             </p>
 
-            <div className="mt-10 flex flex-wrap gap-4">
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row md:mt-10">
               <a
                 href={current.button}
                 target={current.button.startsWith("http") ? "_blank" : undefined}
                 rel={current.button.startsWith("http") ? "noopener noreferrer" : undefined}
-                className="rounded-2xl bg-lime-400 px-8 py-4 font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105"
+                className="w-full rounded-2xl bg-lime-400 px-8 py-4 text-center font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105 sm:w-auto"
               >
                 {current.buttonText}
               </a>
@@ -235,7 +293,7 @@ export default function Home() {
                 href="https://discord.gg/WJXXcGr2J3"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-2xl border border-white/20 bg-white/10 px-8 py-4 font-black backdrop-blur transition hover:border-lime-400 hover:bg-lime-400/10"
+                className="w-full rounded-2xl border border-white/20 bg-white/10 px-8 py-4 text-center font-black backdrop-blur transition hover:border-lime-400 hover:bg-lime-400/10 sm:w-auto"
               >
                 Discord
               </a>
@@ -326,13 +384,13 @@ export default function Home() {
                 Explore
               </p>
 
-              <h3 className="mt-3 text-5xl font-black">
+              <h3 className="mt-3 text-3xl font-black md:text-5xl">
                 Esplora il nostro sito
               </h3>
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {cards.map((card) => (
               <div
                 key={card.title}
@@ -365,7 +423,7 @@ export default function Home() {
       </section>
 
       <footer className="relative z-10 border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-10 md:flex-row md:px-6">
           <div className="flex items-center gap-4">
             <Image
               src="/logo-bordo-campo.png"
