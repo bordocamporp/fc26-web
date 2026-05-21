@@ -14,9 +14,11 @@ async function getStandings() {
     .order("points", { ascending: false });
 
   if (error) {
-    console.error(error);
+    console.error("STANDINGS ERROR:", error);
     return [];
   }
+
+  console.log("STANDINGS DATA:", data);
 
   return data || [];
 }
