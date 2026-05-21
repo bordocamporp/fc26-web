@@ -217,16 +217,16 @@ export default async function ManagerPage() {
       <div className="fixed left-[-160px] top-[-160px] h-[420px] w-[420px] rounded-full bg-lime-400/20 blur-[140px]" />
       <div className="fixed bottom-[-180px] right-[-120px] h-[420px] w-[420px] rounded-full bg-emerald-500/10 blur-[140px]" />
 
-      <header className="relative z-10 border-b border-lime-400/20 bg-black/85 px-8 py-5 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-6">
+      <header className="relative z-10 border-b border-lime-400/20 bg-black/85 px-4 py-4 md:px-4 md:px-8 md:py-5 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 md:flex-row md:items-center md:justify-between gap-4 md:p-6">
           <a href="/" className="flex items-center gap-4">
             <Image src="/logo-bordo-campo.png" alt="BC" width={54} height={54} />
 
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.4em] text-lime-400">
+              <p className="text-xs font-black uppercase tracking-[0.22em] md:tracking-[0.4em] text-lime-400">
                 Bordo Campo Manager Hub
               </p>
-              <h1 className="text-3xl font-black tracking-widest">
+              <h1 className="text-base md:text-xl md:text-3xl font-black tracking-widest">
                 AREA MANAGER
               </h1>
             </div>
@@ -239,14 +239,14 @@ export default async function ManagerPage() {
         </div>
       </header>
 
-      <section className="relative z-10 mx-auto max-w-[1600px] px-6 py-8">
+      <section className="relative z-10 mx-auto max-w-[1600px] px-4 md:px-6 py-8">
         {!clubName ? (
-          <div className="rounded-[2rem] border border-orange-400/30 bg-orange-400/10 p-10">
-            <p className="text-sm font-black uppercase tracking-[0.35em] text-orange-400">
+          <div className="rounded-[1.5rem] md:rounded-[2rem] border border-orange-400/30 bg-orange-400/10 p-4 md:p-6 md:p-10">
+            <p className="text-sm font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-orange-400">
               Nessun club assegnato
             </p>
 
-            <h2 className="mt-4 text-5xl font-black">
+            <h2 className="mt-4 text-base md:text-xl md:text-3xl md:text-5xl font-black">
               Non hai ancora una squadra
             </h2>
 
@@ -258,7 +258,7 @@ export default async function ManagerPage() {
             <div className="mt-8">
               <a
                 href="/iscrizione"
-                className="inline-flex items-center justify-center rounded-2xl bg-lime-400 px-8 py-4 text-lg font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105 hover:bg-lime-300"
+                className="inline-flex items-center justify-center rounded-2xl bg-lime-400 px-5 py-4 md:px-4 md:px-8 text-base md:text-lg font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105 hover:bg-lime-300"
               >
                 ISCRIVITI AL TORNEO FC
               </a>
@@ -266,17 +266,17 @@ export default async function ManagerPage() {
           </div>
         ) : (
           <>
-            <section className="grid gap-6 xl:grid-cols-[1fr_390px]">
-              <div className="relative overflow-hidden rounded-[2.5rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/15 via-white/[0.04] to-black p-8 shadow-[0_0_80px_rgba(132,204,22,0.10)]">
+            <section className="grid gap-4 md:p-6 xl:grid-cols-[1fr_390px]">
+              <div className="relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] md:rounded-[2.5rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/15 via-white/[0.04] to-black p-5 md:p-8 shadow-[0_0_80px_rgba(132,204,22,0.10)]">
                 <div className="absolute right-[-120px] top-[-140px] h-[360px] w-[360px] rounded-full bg-lime-400/20 blur-[120px]" />
 
-                <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                <div className="relative z-10 flex flex-col gap-5 md:p-8 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.4em] text-lime-400">
+                    <p className="text-xs font-black uppercase tracking-[0.22em] md:tracking-[0.4em] text-lime-400">
                       Club assegnato
                     </p>
 
-                    <h2 className="mt-4 text-5xl font-black leading-none md:text-7xl">
+                    <h2 className="mt-4 text-base md:text-xl md:text-3xl md:text-5xl font-black leading-none md:text-base md:text-xl md:text-3xl md:text-5xl md:text-7xl">
                       {clubName}
                     </h2>
 
@@ -299,9 +299,9 @@ export default async function ManagerPage() {
               <TopPlayerCard player={bestPlayer} />
             </section>
 
-            <section className="mt-8 grid gap-8 xl:grid-cols-[320px_1fr]">
-              <aside className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+            <section className="mt-8 grid gap-5 md:p-8 xl:grid-cols-[320px_1fr]">
+              <aside className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 md:p-6 backdrop-blur-xl">
+                <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                   Rosa riepilogo
                 </p>
 
@@ -309,7 +309,7 @@ export default async function ManagerPage() {
                   {Object.entries(roleCounts).slice(0, 12).map(([role, count]) => (
                     <div
                       key={role}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3"
+                      className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3"
                     >
                       <span className="font-black">{role}</span>
                       <span className="text-lime-400">{String(count)}</span>
@@ -341,14 +341,14 @@ export default async function ManagerPage() {
                 </div>
               </aside>
 
-              <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-xl">
+              <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-7 backdrop-blur-xl">
                 <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                       Rosa ufficiale
                     </p>
 
-                    <h3 className="mt-2 text-4xl font-black">
+                    <h3 className="mt-2 text-2xl md:text-4xl font-black">
                       {roster.length} giocatori
                     </h3>
                   </div>
@@ -359,12 +359,12 @@ export default async function ManagerPage() {
                 </div>
 
                 {roster.length === 0 ? (
-                  <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-6 text-red-100">
+                  <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-4 md:p-6 text-red-100">
                     Nessun giocatore trovato. Discord ID rilevato: <b>{discordId}</b>.
                     Club rilevato: <b>{clubName}</b>.
                   </div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
                     {roster.map((player: any) => (
                       <PlayerCard key={player.id} player={player} />
                     ))}
@@ -381,16 +381,16 @@ export default async function ManagerPage() {
 
 function TopPlayerCard({ player }: { player: any }) {
   return (
-    <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/60 p-6 backdrop-blur-xl">
+    <div className="relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] md:rounded-[2.5rem] border border-white/10 bg-black/60 p-4 md:p-6 backdrop-blur-xl">
       <div className="absolute right-[-80px] top-[-80px] h-[220px] w-[220px] rounded-full bg-lime-400/10 blur-[80px]" />
 
-      <p className="relative z-10 text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+      <p className="relative z-10 text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
         Top player
       </p>
 
       {player ? (
         <div className="relative z-10 mt-5">
-          <div className="mx-auto flex h-48 w-48 items-end justify-center overflow-hidden rounded-[2rem] border border-lime-400/20 bg-gradient-to-b from-lime-400/20 to-black">
+          <div className="mx-auto flex h-48 w-48 items-end justify-center overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-lime-400/20 bg-gradient-to-b from-lime-400/20 to-black">
             {player.image_url ? (
               <img
                 src={player.image_url}
@@ -398,19 +398,19 @@ function TopPlayerCard({ player }: { player: any }) {
                 className="h-44 object-contain"
               />
             ) : (
-              <div className="mb-8 text-6xl">👤</div>
+              <div className="mb-8 text-2xl md:text-4xl md:text-6xl">👤</div>
             )}
           </div>
 
-          <div className="mt-5 flex items-center justify-between gap-4">
+          <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h3 className="text-3xl font-black">{player.name}</h3>
+              <h3 className="text-base md:text-xl md:text-3xl font-black">{player.name}</h3>
               <p className="mt-1 text-zinc-400">
                 {player.position || "N/D"} • {player.nation || player.nationality || "N/D"}
               </p>
             </div>
 
-            <div className={`rounded-2xl bg-gradient-to-br px-5 py-4 text-3xl font-black ${ovrColor(player.overall)}`}>
+            <div className={`rounded-2xl bg-gradient-to-br px-5 py-4 text-base md:text-xl md:text-3xl font-black ${ovrColor(player.overall)}`}>
               {player.overall || "—"}
             </div>
           </div>
@@ -442,7 +442,7 @@ function PlayerCard({ player }: { player: any }) {
   const physical = player.physical ?? player.phy;
 
   return (
-    <article className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-black/50 p-5 transition duration-300 hover:-translate-y-1 hover:border-lime-400/60 hover:shadow-[0_0_45px_rgba(132,204,22,0.18)]">
+    <article className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-black/50 p-5 transition duration-300 hover:-translate-y-1 hover:border-lime-400/60 hover:shadow-[0_0_45px_rgba(132,204,22,0.18)]">
       <div className="absolute right-[-40px] top-[-40px] h-32 w-32 rounded-full bg-lime-400/10 blur-[55px] transition group-hover:bg-lime-400/20" />
 
       <div className="relative z-10 flex items-start gap-4">
@@ -454,14 +454,14 @@ function PlayerCard({ player }: { player: any }) {
               className="h-24 object-contain transition duration-300 group-hover:scale-110"
             />
           ) : (
-            <span className="mb-5 text-3xl">👤</span>
+            <span className="mb-5 text-base md:text-xl md:text-3xl">👤</span>
           )}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h4 className="truncate text-xl font-black">{player.name}</h4>
+              <h4 className="truncate text-base md:text-xl font-black">{player.name}</h4>
               <p className="mt-1 text-sm text-zinc-400">
                 {player.position || "N/D"} • {player.nation || player.nationality || "N/D"}
               </p>
@@ -521,7 +521,7 @@ function ManagerSideButton({
           <ManagerIcon type={icon} />
         </div>
 
-        <h4 className="text-xl font-black uppercase tracking-wide text-white">
+        <h4 className="text-base md:text-xl font-black uppercase tracking-wide text-white">
           {title}
         </h4>
 
@@ -667,7 +667,7 @@ function StatBar({
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
+      <div className="mb-1 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-xs">
         <span className="font-black text-zinc-500">{label}</span>
         <span className="font-black text-white">{value ?? "—"}</span>
       </div>
@@ -697,7 +697,7 @@ function Stat({
         {title}
       </p>
 
-      <p className={`mt-3 text-4xl font-black ${color}`}>
+      <p className={`mt-3 text-2xl md:text-4xl font-black ${color}`}>
         {value}
       </p>
     </div>
@@ -714,7 +714,7 @@ function MiniStat({
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-center">
       <p className="text-[10px] font-black text-zinc-500">{label}</p>
-      <p className="text-lg font-black text-white">{value || "—"}</p>
+      <p className="text-base md:text-lg font-black text-white">{value || "—"}</p>
     </div>
   );
 }
