@@ -30,14 +30,12 @@ type Match = {
   away_players: Player[];
 };
 
+function matchKey(match: Match) {
+  return `${match.source_table}-${match.id}`;
+}
+
 function getPlayerImage(player: Player) {
-  return (
-    player.card_url ||
-    player.image_url ||
-    player.photo_url ||
-    player.avatar_url ||
-    ""
-  );
+  return player.card_url || player.image_url || player.photo_url || player.avatar_url || "";
 }
 
 function PlayerMiniCard({
@@ -55,24 +53,24 @@ function PlayerMiniCard({
 
   return (
     <div
-      className={`grid grid-cols-[54px_1fr_auto] items-center gap-3 rounded-2xl border p-2.5 transition ${
+      className={`grid grid-cols-[50px_1fr_auto] items-center gap-2.5 rounded-2xl border p-2 transition ${
         selectedGoals > 0
           ? "border-lime-400 bg-lime-400/10 shadow-[0_0_20px_rgba(132,204,22,0.16)]"
           : "border-white/10 bg-white/[0.035] hover:border-lime-400/40"
       }`}
     >
-      <div className="relative h-[62px] w-[54px] overflow-hidden rounded-xl bg-zinc-900">
+      <div className="relative h-[58px] w-[50px] overflow-hidden rounded-xl bg-zinc-900">
         {image ? (
           <Image
             src={image}
             alt={player.name}
             fill
             className="object-cover"
-            sizes="54px"
+            sizes="50px"
             unoptimized
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/10 text-sm font-black text-lime-400">
+          <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/10 text-xs font-black text-lime-400">
             {player.name
               .split(" ")
               .map((part) => part[0])
@@ -84,33 +82,31 @@ function PlayerMiniCard({
       </div>
 
       <div className="min-w-0">
-        <p className="truncate text-sm font-black text-white">{player.name}</p>
-        <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+        <p className="truncate text-xs font-black text-white md:text-sm">{player.name}</p>
+        <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-500">
           {player.position || "Player"} {player.overall ? `• OVR ${player.overall}` : ""}
         </p>
-        <p className="mt-0.5 truncate text-[10px] text-zinc-500">{club}</p>
+        <p className="mt-0.5 truncate text-[9px] text-zinc-500">{club}</p>
       </div>
 
-      <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-black/35 p-1">
+      <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/35 p-1">
         <button
           type="button"
           onClick={() => onChange(Math.max(0, selectedGoals - 1))}
-          className="h-8 w-8 rounded-lg bg-white/10 text-base font-black text-white transition hover:bg-red-400 hover:text-black"
+          className="h-7 w-7 rounded-lg bg-white/10 text-sm font-black text-white transition hover:bg-red-400 hover:text-black"
         >
           -
         </button>
 
-        <div className="w-8 text-center">
-          <p className="text-[8px] font-black uppercase tracking-[0.18em] text-zinc-500">
-            Gol
-          </p>
-          <p className="text-lg font-black leading-none text-lime-400">{selectedGoals}</p>
+        <div className="w-7 text-center">
+          <p className="text-[7px] font-black uppercase tracking-[0.18em] text-zinc-500">Gol</p>
+          <p className="text-base font-black leading-none text-lime-400">{selectedGoals}</p>
         </div>
 
         <button
           type="button"
           onClick={() => onChange(Math.min(12, selectedGoals + 1))}
-          className="h-8 w-8 rounded-lg bg-lime-400 text-base font-black text-black transition hover:scale-105"
+          className="h-7 w-7 rounded-lg bg-lime-400 text-sm font-black text-black transition hover:scale-105"
         >
           +
         </button>
@@ -122,7 +118,7 @@ function PlayerMiniCard({
 export default function TorneoRisultatiPage() {
   const [sessionUserId, setSessionUserId] = useState("");
   const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedMatchId, setSelectedMatchId] = useState("");
+  const [selectedMatchKey, setSelectedMatchKey] = useState("");
   const [homeGoals, setHomeGoals] = useState<Record<string, number>>({});
   const [awayGoals, setAwayGoals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -155,10 +151,11 @@ export default function TorneoRisultatiPage() {
         throw new Error(data?.error || "Errore caricamento partite.");
       }
 
-      setMatches(data.matches || []);
+      const loadedMatches = data.matches || [];
+      setMatches(loadedMatches);
 
-      if (data.matches?.length && !selectedMatchId) {
-        setSelectedMatchId(String(data.matches[0].id));
+      if (loadedMatches.length && !selectedMatchKey) {
+        setSelectedMatchKey(matchKey(loadedMatches[0]));
       }
     } catch (error: any) {
       setMessage(`❌ ${error.message || "Errore caricamento."}`);
@@ -173,8 +170,8 @@ export default function TorneoRisultatiPage() {
   }, []);
 
   const selectedMatch = useMemo(
-    () => matches.find((match) => String(match.id) === String(selectedMatchId)),
-    [matches, selectedMatchId]
+    () => matches.find((match) => matchKey(match) === selectedMatchKey),
+    [matches, selectedMatchKey]
   );
 
   const homeTotal = useMemo(
@@ -300,15 +297,16 @@ export default function TorneoRisultatiPage() {
               </p>
 
               <div className="mt-4 space-y-2.5">
-                {matches.map((match, index) => {
-                  const selected = String(match.id) === String(selectedMatchId);
+                {matches.map((match) => {
+                  const currentKey = matchKey(match);
+                  const selected = currentKey === selectedMatchKey;
 
                   return (
                     <button
-                      key={`${match.source_table}-${match.id}-${index}`}
+                      key={currentKey}
                       type="button"
                       onClick={() => {
-                        setSelectedMatchId(String(match.id));
+                        setSelectedMatchKey(currentKey);
                         setHomeGoals({});
                         setAwayGoals({});
                       }}
@@ -362,21 +360,23 @@ export default function TorneoRisultatiPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
-                    {selectedMatch.home_players.map((player) => (
-                      <PlayerMiniCard
-                        key={String(player.id)}
-                        player={player}
-                        club={selectedMatch.home_club}
-                        selectedGoals={homeGoals[String(player.id)] || 0}
-                        onChange={(goals) =>
-                          setHomeGoals((current) => ({
-                            ...current,
-                            [String(player.id)]: goals,
-                          }))
-                        }
-                      />
-                    ))}
+                  <div className="mt-4 max-h-[430px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
+                      {selectedMatch.home_players.map((player) => (
+                        <PlayerMiniCard
+                          key={String(player.id)}
+                          player={player}
+                          club={selectedMatch.home_club}
+                          selectedGoals={homeGoals[String(player.id)] || 0}
+                          onChange={(goals) =>
+                            setHomeGoals((current) => ({
+                              ...current,
+                              [String(player.id)]: goals,
+                            }))
+                          }
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -395,21 +395,23 @@ export default function TorneoRisultatiPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
-                    {selectedMatch.away_players.map((player) => (
-                      <PlayerMiniCard
-                        key={String(player.id)}
-                        player={player}
-                        club={selectedMatch.away_club}
-                        selectedGoals={awayGoals[String(player.id)] || 0}
-                        onChange={(goals) =>
-                          setAwayGoals((current) => ({
-                            ...current,
-                            [String(player.id)]: goals,
-                          }))
-                        }
-                      />
-                    ))}
+                  <div className="mt-4 max-h-[430px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
+                      {selectedMatch.away_players.map((player) => (
+                        <PlayerMiniCard
+                          key={String(player.id)}
+                          player={player}
+                          club={selectedMatch.away_club}
+                          selectedGoals={awayGoals[String(player.id)] || 0}
+                          onChange={(goals) =>
+                            setAwayGoals((current) => ({
+                              ...current,
+                              [String(player.id)]: goals,
+                            }))
+                          }
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
