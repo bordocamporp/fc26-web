@@ -289,13 +289,13 @@ export default function Home() {
               </a>
 
               <a
-                href="https://discord.gg/WJXXcGr2J3"
+                href="https://discord.gg/kB8Km94Kba"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full rounded-2xl border border-white/20 bg-white/10 px-8 py-4 text-center font-black backdrop-blur transition hover:border-lime-400 hover:bg-lime-400/10 sm:w-auto"
+                className="w-full rounded-2xl border border-lime-400/40 bg-lime-400/10 px-8 py-4 text-center font-black text-lime-300 backdrop-blur transition hover:scale-105 hover:border-lime-400 hover:bg-lime-400/20 sm:w-auto"
               >
-                Discord
-              </a>
+            ENTRA NEL DISCORD DEL TORNEO
+            </a>
             </div>
 
             <div className="mt-12 flex gap-3">
