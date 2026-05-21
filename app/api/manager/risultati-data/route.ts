@@ -4,14 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false },
-});
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  { auth: { persistSession: false } }
+);
 
 function v(row: any, keys: string[], fallback = "") {
   for (const key of keys) {
@@ -20,36 +17,25 @@ function v(row: any, keys: string[], fallback = "") {
   return fallback;
 }
 
-function isPending(row: any) {
-  const status = String(row.status || "pending").toLowerCase();
+function isPlayed(row: any) {
+  const status = String(row.status || "").toLowerCase();
   const homeGoals = row.home_goals ?? row.home_score;
   const awayGoals = row.away_goals ?? row.away_score;
 
-  return status !== "played" && homeGoals === null && awayGoals === null;
+  return status === "played" || (homeGoals !== null && homeGoals !== undefined && awayGoals !== null && awayGoals !== undefined);
 }
 
 async function safeRows(table: string) {
   const { data, error } = await supabase.from(table).select("*");
-
-  if (error) {
-    return { rows: [], error: error.message };
-  }
-
-  return { rows: data || [], error: null };
+  return { rows: data || [], error: error?.message || null };
 }
 
 async function playersForClub(clubName: string) {
   const { rows } = await safeRows("players");
-
   const club = String(clubName || "").toLowerCase().trim();
 
   let filtered = rows.filter((p: any) => {
-    const team = String(
-      p.team || p.club_name || p.club || p.team_name || ""
-    )
-      .toLowerCase()
-      .trim();
-
+    const team = String(p.team || p.club_name || p.club || p.team_name || "").toLowerCase().trim();
     return team === club || team.includes(club) || club.includes(team);
   });
 
@@ -61,6 +47,8 @@ async function playersForClub(clubName: string) {
     position: v(p, ["position", "role"], ""),
     overall: v(p, ["overall", "ovr", "rating"], ""),
     team: v(p, ["team", "club_name", "club", "team_name"], ""),
+    card_url: v(p, ["card_url", "image_url", "photo_url", "avatar_url"], ""),
+    image_url: v(p, ["image_url", "card_url", "photo_url", "avatar_url"], ""),
   }));
 }
 
@@ -74,7 +62,7 @@ export async function GET() {
     const rawMatches: any[] = [];
 
     for (const row of championship.rows) {
-      if (!isPending(row)) continue;
+      if (isPlayed(row)) continue;
 
       rawMatches.push({
         id: String(row.id),
@@ -91,7 +79,7 @@ export async function GET() {
     }
 
     for (const row of nationalCup.rows) {
-      if (!isPending(row)) continue;
+      if (isPlayed(row)) continue;
 
       rawMatches.push({
         id: String(row.id),
@@ -108,8 +96,7 @@ export async function GET() {
     }
 
     for (const row of fixtures.rows) {
-      const played = row.played === true || String(row.status || "").toLowerCase() === "played";
-      if (played) continue;
+      if (isPlayed(row) || row.played === true) continue;
 
       rawMatches.push({
         id: String(row.id),
@@ -126,7 +113,7 @@ export async function GET() {
     }
 
     for (const row of cupMatches.rows) {
-      if (!isPending(row)) continue;
+      if (isPlayed(row)) continue;
 
       rawMatches.push({
         id: String(row.id),
@@ -143,7 +130,6 @@ export async function GET() {
     }
 
     const matches = [];
-
     for (const match of rawMatches) {
       matches.push({
         ...match,
@@ -156,24 +142,14 @@ export async function GET() {
       debug: {
         usingServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
         championship_matches: championship.rows.length,
-        championship_error: championship.error,
         national_cup_matches: nationalCup.rows.length,
-        national_cup_error: nationalCup.error,
         fixtures: fixtures.rows.length,
-        fixtures_error: fixtures.error,
         cup_matches: cupMatches.rows.length,
-        cup_matches_error: cupMatches.error,
         returned_matches: matches.length,
       },
       matches,
     });
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        error: error.message || "Errore API risultati-data",
-        matches: [],
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "Errore API", matches: [] }, { status: 500 });
   }
 }
