@@ -20,12 +20,16 @@ function v(row: any, keys: string[], fallback = "") {
   return fallback;
 }
 
+function isEmptyScore(value: any) {
+  return value === null || value === undefined || value === "";
+}
+
 function isPending(row: any) {
   const status = String(row.status || "pending").toLowerCase();
-  const homeGoals = row.home_goals ?? row.home_score;
-  const awayGoals = row.away_goals ?? row.away_score;
+  const homeGoals = row.home_goals !== undefined ? row.home_goals : row.home_score;
+  const awayGoals = row.away_goals !== undefined ? row.away_goals : row.away_score;
 
-  return status !== "played" && homeGoals === null && awayGoals === null;
+  return status !== "played" && isEmptyScore(homeGoals) && isEmptyScore(awayGoals);
 }
 
 async function safeRows(table: string) {
@@ -156,13 +160,9 @@ export async function GET() {
       debug: {
         usingServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
         championship_matches: championship.rows.length,
-        championship_error: championship.error,
         national_cup_matches: nationalCup.rows.length,
-        national_cup_error: nationalCup.error,
         fixtures: fixtures.rows.length,
-        fixtures_error: fixtures.error,
         cup_matches: cupMatches.rows.length,
-        cup_matches_error: cupMatches.error,
         returned_matches: matches.length,
       },
       matches,
