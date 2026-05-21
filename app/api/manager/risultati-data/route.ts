@@ -25,6 +25,10 @@ function isPlayed(row: any) {
   return status === "played" || (homeGoals !== null && homeGoals !== undefined && awayGoals !== null && awayGoals !== undefined);
 }
 
+function normalize(value: unknown) {
+  return String(value || "").toLowerCase().trim();
+}
+
 async function safeRows(table: string) {
   const { data, error } = await supabase.from(table).select("*");
   return { rows: data || [], error: error?.message || null };
@@ -32,16 +36,21 @@ async function safeRows(table: string) {
 
 async function playersForClub(clubName: string) {
   const { rows } = await safeRows("players");
-  const club = String(clubName || "").toLowerCase().trim();
+  const club = normalize(clubName);
 
   let filtered = rows.filter((p: any) => {
-    const team = String(p.team || p.club_name || p.club || p.team_name || "").toLowerCase().trim();
+    const team = normalize(p.team || p.club_name || p.club || p.team_name);
     return team === club || team.includes(club) || club.includes(team);
   });
 
-  if (!filtered.length) filtered = rows.slice(0, 25);
+  if (!filtered.length) {
+    filtered = rows.filter((p: any) => {
+      const team = normalize(p.team || p.club_name || p.club || p.team_name);
+      return club && (team.includes(club.split(" ")[0]) || club.includes(team.split(" ")[0]));
+    });
+  }
 
-  return filtered.slice(0, 25).map((p: any) => ({
+  return filtered.map((p: any) => ({
     id: String(v(p, ["id", "player_id", "name"])),
     name: String(v(p, ["name", "player_name"], "Giocatore")),
     position: v(p, ["position", "role"], ""),
@@ -49,6 +58,8 @@ async function playersForClub(clubName: string) {
     team: v(p, ["team", "club_name", "club", "team_name"], ""),
     card_url: v(p, ["card_url", "image_url", "photo_url", "avatar_url"], ""),
     image_url: v(p, ["image_url", "card_url", "photo_url", "avatar_url"], ""),
+    photo_url: v(p, ["photo_url", "image_url", "card_url", "avatar_url"], ""),
+    avatar_url: v(p, ["avatar_url", "image_url", "card_url", "photo_url"], ""),
   }));
 }
 
@@ -129,8 +140,14 @@ export async function GET() {
       });
     }
 
+    const seen = new Set<string>();
     const matches = [];
+
     for (const match of rawMatches) {
+      const key = `${match.source_table}-${match.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
       matches.push({
         ...match,
         home_players: await playersForClub(match.home_club),
