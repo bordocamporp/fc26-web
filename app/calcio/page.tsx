@@ -4,7 +4,6 @@ type NewsItem = {
   source: string;
   pubDate: string;
   description: string;
-  image?: string;
 };
 
 type StandingRow = {
@@ -25,6 +24,13 @@ const DISCORD_LIVE_URL = "https://discord.gg/WJXXcGr2J3";
 
 const GOOGLE_NEWS_RSS =
   "https://news.google.com/rss/search?q=calcio%20OR%20calciomercato%20OR%20Serie%20A%20OR%20Champions%20League%20when:1d&hl=it&gl=IT&ceid=IT:it";
+
+const HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1800&q=80",
+  "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1800&q=80",
+  "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1800&q=80",
+  "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=1800&q=80",
+];
 
 export const revalidate = 300;
 
@@ -153,7 +159,7 @@ function getTheme(news: NewsItem[]) {
     return {
       label: "Speciale Mondiale",
       title: "Il calcio mondiale, le notizie più calde",
-      bg: "from-sky-500/30 via-emerald-400/15 to-black",
+      bg: "from-sky-500/35 via-emerald-400/15 to-black",
       icon: "🌍",
     };
   }
@@ -202,10 +208,7 @@ function formatDate(value: string) {
 function newsCategory(title: string) {
   const lower = title.toLowerCase();
 
-  if (lower.includes("colpo") || lower.includes("mercato") || lower.includes("trasfer")) {
-    return "COLPO DI MERCATO";
-  }
-
+  if (lower.includes("colpo") || lower.includes("mercato") || lower.includes("trasfer")) return "COLPO DI MERCATO";
   if (lower.includes("champions")) return "CHAMPIONS";
   if (lower.includes("mondiale") || lower.includes("world cup")) return "MONDIALE";
   if (lower.includes("serie a")) return "SERIE A";
@@ -234,6 +237,9 @@ export default async function CalcioPage() {
   const mainNews = news[0];
   const hasFootballApi = Boolean(process.env.FOOTBALL_DATA_API_KEY);
 
+  const heroIndex = Math.floor(Date.now() / (1000 * 60 * 10)) % HERO_IMAGES.length;
+  const heroImage = HERO_IMAGES[heroIndex];
+
   const tickerItems =
     news.length > 0
       ? news.slice(0, 8)
@@ -246,27 +252,53 @@ export default async function CalcioPage() {
 
   return (
     <main className="min-h-screen bg-[#020403] text-white">
-      <section className={`relative overflow-hidden border-b border-lime-400/20 bg-gradient-to-br ${theme.bg} px-6 py-16 md:py-24`}>
-        <div className="absolute left-[-160px] top-[-160px] h-[520px] w-[520px] rounded-full bg-lime-400/20 blur-[160px]" />
-        <div className="absolute bottom-[-200px] right-[-120px] h-[520px] w-[520px] rounded-full bg-emerald-500/15 blur-[160px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(255,255,255,0.10),transparent_26%)]" />
+      <style>{`
+        @keyframes bcMarquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
 
-        <div className="relative z-10 mx-auto grid max-w-7xl gap-10 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+        @keyframes bcFloat {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-12px) scale(1.02); }
+        }
+
+        .bc-marquee {
+          animation: bcMarquee 35s linear infinite;
+        }
+
+        .bc-float {
+          animation: bcFloat 8s ease-in-out infinite;
+        }
+      `}</style>
+
+      <section className={`relative min-h-[760px] overflow-hidden border-b border-lime-400/20 bg-gradient-to-br ${theme.bg} px-6 py-16 md:py-24`}>
+        <div
+          className="absolute inset-0 scale-105 bg-cover bg-center opacity-55"
+          style={{ backgroundImage: `url('${heroImage}')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/65 to-black/25" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#020403] via-transparent to-black/40" />
+
+        <div className="absolute left-[-160px] top-[-160px] h-[520px] w-[520px] rounded-full bg-lime-400/25 blur-[160px]" />
+        <div className="absolute bottom-[-200px] right-[-120px] h-[520px] w-[520px] rounded-full bg-emerald-500/20 blur-[160px]" />
+
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-10 xl:grid-cols-[1fr_0.9fr] xl:items-center">
           <div>
-            <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-lime-400/30 bg-black/40 px-5 py-3 backdrop-blur">
+            <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-lime-400/30 bg-black/55 px-5 py-3 backdrop-blur">
               <span className="text-3xl">{theme.icon}</span>
               <span className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
                 {theme.label}
               </span>
             </div>
 
-            <h1 className="max-w-5xl text-5xl font-black leading-none md:text-7xl">
+            <h1 className="max-w-5xl text-5xl font-black leading-none drop-shadow-2xl md:text-7xl">
               {theme.title}
             </h1>
 
-            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
-              News calcistiche prese online, aggiornate automaticamente e mostrate senza link sporchi:
-              titolo, anteprima articolo, fonte e pulsante per leggere l’articolo completo.
+            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-200">
+              News calcistiche prese online, immagini dinamiche dal mondo del calcio,
+              risultati, classifiche e aggiornamenti in tempo quasi reale.
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -274,14 +306,14 @@ export default async function CalcioPage() {
                 href={DISCORD_LIVE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="animate-pulse rounded-2xl bg-red-500 px-8 py-4 text-center text-lg font-black text-white shadow-[0_0_35px_rgba(239,68,68,0.65)] transition hover:scale-105 hover:bg-red-400"
+                className="animate-pulse rounded-2xl bg-red-500 px-8 py-4 text-center text-lg font-black text-white shadow-[0_0_45px_rgba(239,68,68,0.75)] transition hover:scale-105 hover:bg-red-400"
               >
                 🔴 LIVE ENTRA
               </a>
 
               <a
                 href="#news"
-                className="rounded-2xl border border-lime-400/40 bg-lime-400/10 px-8 py-4 text-center font-black text-lime-300 transition hover:bg-lime-400 hover:text-black"
+                className="rounded-2xl border border-lime-400/50 bg-black/45 px-8 py-4 text-center font-black text-lime-300 backdrop-blur transition hover:bg-lime-400 hover:text-black"
               >
                 VEDI LE NEWS
               </a>
@@ -293,9 +325,9 @@ export default async function CalcioPage() {
               href={mainNews.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-[2.5rem] border border-lime-400/25 bg-black/55 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:border-lime-400 hover:shadow-[0_0_70px_rgba(132,204,22,0.20)]"
+              className="group bc-float relative overflow-hidden rounded-[2.5rem] border border-lime-400/30 bg-black/65 p-6 backdrop-blur-xl transition hover:border-lime-400 hover:shadow-[0_0_80px_rgba(132,204,22,0.28)]"
             >
-              <div className="absolute right-[-100px] top-[-100px] h-[280px] w-[280px] rounded-full bg-lime-400/20 blur-[100px]" />
+              <div className="absolute right-[-100px] top-[-100px] h-[280px] w-[280px] rounded-full bg-lime-400/25 blur-[100px]" />
 
               <div className="relative z-10">
                 <div className="mb-5 flex items-center justify-between gap-4">
@@ -325,9 +357,9 @@ export default async function CalcioPage() {
         </div>
       </section>
 
-      <section className="overflow-hidden border-y border-lime-400/20 bg-lime-400/10 py-4">
-        <div className="flex w-max animate-[marquee_28s_linear_infinite] gap-12 whitespace-nowrap px-6 text-sm font-black uppercase tracking-[0.25em] text-lime-300">
-          {[...tickerItems, ...tickerItems].map((item: any, index) => (
+      <section className="overflow-hidden border-y border-lime-400/25 bg-black py-4">
+        <div className="bc-marquee flex w-max gap-16 whitespace-nowrap px-6 text-sm font-black uppercase tracking-[0.25em] text-lime-300">
+          {[...tickerItems, ...tickerItems, ...tickerItems].map((item: any, index) => (
             <span key={`${item.link}-${index}`}>
               {newsCategory(item.title)}: {shortTitle(item.title)}
             </span>
