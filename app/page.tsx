@@ -58,16 +58,12 @@ const cards = [
     desc: "News, mercato, risultati e approfondimenti sul calcio reale.",
     visual: "from-green-500/35 via-lime-400/15 to-black",
     badge: "CALCIO",
-    button: "/calcio",
-    buttonText: "CALCIO",
   },
   {
     title: "GAMING",
     desc: "Videogiochi, esports, recensioni e contenuti community.",
     visual: "from-violet-500/35 via-cyan-400/15 to-black",
     badge: "GAMING",
-    button: "/gaming",
-    buttonText: "GAMING",
   },
 ];
 
