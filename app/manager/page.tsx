@@ -326,14 +326,14 @@ export default async function ManagerPage() {
                   />
 
                   <ManagerSideButton
-                    href="/calendario"
+                    href="/torneo/calendario"
                     title="CALENDARIO"
                     description="Controlla le prossime partite e gli eventi."
                     icon="calendar"
                   />
 
                   <ManagerSideButton
-                    href="/risultati"
+                    href="/torneo/risultati"
                     title="RISULTATI"
                     description="Guarda gli ultimi risultati delle partite."
                     icon="ball"
