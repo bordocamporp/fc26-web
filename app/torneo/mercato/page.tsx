@@ -257,8 +257,8 @@ export default function MercatoPage() {
       <div className="fixed left-[-180px] top-[-180px] h-[500px] w-[500px] rounded-full bg-lime-400/20 blur-[160px]" />
       <div className="fixed bottom-[-200px] right-[-160px] h-[520px] w-[520px] rounded-full bg-emerald-500/10 blur-[170px]" />
 
-      <header className="relative z-20 border-b border-lime-400/20 bg-black/80 px-6 py-5 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1700px] items-center justify-between gap-6">
+      <header className="relative z-20 border-b border-lime-400/20 bg-black/80 px-4 md:px-6 py-5 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1700px] flex-col gap-4 md:flex-row md:items-center md:justify-between gap-4 md:p-6">
           <a href="/torneo" className="flex items-center gap-4">
             <Image
               src="/logo-bordo-campo.png"
@@ -269,10 +269,10 @@ export default function MercatoPage() {
             />
 
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.45em] text-lime-400">
+              <p className="text-xs font-black uppercase tracking-[0.25em] md:tracking-[0.45em] text-lime-400">
                 Torneo BC FC
               </p>
-              <h1 className="text-3xl font-black uppercase tracking-widest">
+              <h1 className="text-base md:text-xl md:text-3xl font-black uppercase tracking-widest">
                 Mercato Live
               </h1>
             </div>
@@ -293,19 +293,19 @@ export default function MercatoPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(132,204,22,0.24),transparent_35%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-lime-400/10 via-black/40 to-black" />
 
-        <div className="relative z-10 mx-auto grid max-w-[1700px] items-center gap-10 px-6 py-16 xl:grid-cols-[1fr_430px]">
+        <div className="relative z-10 mx-auto grid max-w-[1700px] items-center gap-4 md:p-6 md:p-10 px-4 md:px-6 py-8 md:py-10 md:py-16 xl:grid-cols-[1fr_430px]">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.45em] text-lime-400">
+            <p className="text-sm font-black uppercase tracking-[0.25em] md:tracking-[0.45em] text-lime-400">
               Discord Market Sync
             </p>
 
-            <h2 className="mt-5 text-6xl font-black leading-none md:text-8xl">
+            <h2 className="mt-5 text-2xl md:text-4xl md:text-6xl font-black leading-none md:text-base md:text-xl md:text-3xl md:text-5xl md:text-8xl">
               MERCATO
               <br />
               BC FC
             </h2>
 
-            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
+            <p className="mt-6 max-w-3xl text-base md:text-lg leading-relaxed text-zinc-300">
               Il mercato si svolge su Discord. Il sito mostra in tempo reale
               trasferimenti, budget aggiornati, rose modificate e storico operazioni.
             </p>
@@ -320,14 +320,14 @@ export default function MercatoPage() {
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a
                 href="/manager"
-                className="rounded-2xl bg-lime-400 px-8 py-4 font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105"
+                className="rounded-2xl bg-lime-400 px-5 py-4 md:px-4 md:px-8 font-black text-black shadow-[0_0_35px_rgba(132,204,22,0.35)] transition hover:scale-105"
               >
                 AREA MANAGER
               </a>
 
               <button
                 onClick={refresh}
-                className="rounded-2xl border border-white/15 bg-white/10 px-8 py-4 font-black backdrop-blur transition hover:border-lime-400 hover:text-lime-300"
+                className="rounded-2xl border border-white/15 bg-white/10 px-5 py-4 md:px-4 md:px-8 font-black backdrop-blur transition hover:border-lime-400 hover:text-lime-300"
               >
                 AGGIORNA ORA
               </button>
@@ -339,8 +339,8 @@ export default function MercatoPage() {
             </div>
           </div>
 
-          <div className="rounded-[2.5rem] border border-lime-400/25 bg-black/55 p-7 shadow-[0_0_80px_rgba(132,204,22,0.12)] backdrop-blur-xl">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+          <div className="rounded-[1.5rem] md:rounded-[2rem] md:rounded-[2.5rem] border border-lime-400/25 bg-black/55 p-5 md:p-7 shadow-[0_0_80px_rgba(132,204,22,0.12)] backdrop-blur-xl">
+            <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
               Top trasferimento
             </p>
 
@@ -355,7 +355,7 @@ export default function MercatoPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto grid max-w-[1700px] gap-8 px-6 py-10 xl:grid-cols-[360px_1fr]">
+      <section className="relative z-10 mx-auto grid max-w-[1700px] gap-5 md:p-8 px-4 md:px-6 py-8 md:py-10 xl:grid-cols-[360px_1fr]">
         <aside className="space-y-6">
           <Panel title="Navigazione">
             <div className="grid gap-3">
@@ -433,8 +433,8 @@ export default function MercatoPage() {
           </Panel>
         </aside>
 
-        <div className="grid gap-8">
-          <section className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-5 md:p-8">
+          <section className="grid gap-4 md:p-6 md:grid-cols-3">
             <MarketCard
               title="Giocatori assegnati"
               value={soldPlayers.length}
@@ -457,13 +457,13 @@ export default function MercatoPage() {
             />
           </section>
 
-          <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-xl">
+          <section className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-7 backdrop-blur-xl">
             <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+                <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                   Top trasferimenti
                 </p>
-                <h3 className="mt-2 text-4xl font-black">
+                <h3 className="mt-2 text-2xl md:text-4xl font-black">
                   Colpi più costosi
                 </h3>
               </div>
@@ -473,7 +473,7 @@ export default function MercatoPage() {
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               {topTransfers.length ? (
                 topTransfers.map((transfer: any) => (
                   <TopTransferMini key={transfer.id} transfer={transfer} />
@@ -484,14 +484,14 @@ export default function MercatoPage() {
             </div>
           </section>
 
-          <section className="grid gap-8 xl:grid-cols-[1fr_430px]">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-xl">
+          <section className="grid gap-5 md:p-8 xl:grid-cols-[1fr_430px]">
+            <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-7 backdrop-blur-xl">
               <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                     Storico mercato
                   </p>
-                  <h3 className="mt-2 text-4xl font-black">
+                  <h3 className="mt-2 text-2xl md:text-4xl font-black">
                     Trasferimenti live
                   </h3>
                 </div>
@@ -536,18 +536,18 @@ export default function MercatoPage() {
             </Panel>
           </section>
 
-          <section className="grid gap-8 xl:grid-cols-[1fr_430px]">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-xl">
+          <section className="grid gap-5 md:p-8 xl:grid-cols-[1fr_430px]">
+            <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-7 backdrop-blur-xl">
               <div className="mb-7">
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+                <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
                   Giocatori liberi
                 </p>
-                <h3 className="mt-2 text-4xl font-black">
+                <h3 className="mt-2 text-2xl md:text-4xl font-black">
                   Migliori ancora disponibili
                 </h3>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {freePlayers.length ? (
                   freePlayers.map((player: any) => (
                     <FreePlayerCard key={player.id} player={player} />
@@ -578,10 +578,10 @@ export default function MercatoPage() {
 
 function TopTransfer({ transfer }: { transfer: any }) {
   return (
-    <div className="mt-6 rounded-[2rem] border border-lime-400/25 bg-lime-400/10 p-6">
+    <div className="mt-6 rounded-[1.5rem] md:rounded-[2rem] border border-lime-400/25 bg-lime-400/10 p-4 md:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-4xl font-black">
+          <p className="text-2xl md:text-4xl font-black">
             {transfer.player_name || transfer.player?.name || "Giocatore"}
           </p>
 
@@ -601,9 +601,9 @@ function TopTransfer({ transfer }: { transfer: any }) {
         </Badge>
       </div>
 
-      <div className="mt-5 flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 p-4">
+      <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-white/10 bg-black/40 p-4">
         <span className="text-sm text-zinc-400">Prezzo</span>
-        <span className="text-3xl font-black text-lime-400">
+        <span className="text-base md:text-xl md:text-3xl font-black text-lime-400">
           {money(transfer.price)}
         </span>
       </div>
@@ -618,17 +618,17 @@ function TopTransfer({ transfer }: { transfer: any }) {
 function TopTransferMini({ transfer }: { transfer: any }) {
   return (
     <div className="rounded-[1.7rem] border border-lime-400/20 bg-black/35 p-5 transition hover:-translate-y-1 hover:border-lime-400/60">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between gap-3">
         <Badge className={operationClass(transfer.source)}>
           {operationLabel(transfer.source)}
         </Badge>
 
-        <span className="text-xl font-black text-lime-400">
+        <span className="text-base md:text-xl font-black text-lime-400">
           {money(transfer.price)}
         </span>
       </div>
 
-      <p className="truncate text-xl font-black">
+      <p className="truncate text-base md:text-xl font-black">
         {transfer.player_name || "Giocatore"}
       </p>
 
@@ -654,7 +654,7 @@ function BudgetCard({ manager }: { manager: any }) {
 
   return (
     <div className="rounded-2xl border border-white/10 bg-black/35 p-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-black">
             {manager.club_name || manager.manager_name || manager.name || "Manager"}
@@ -736,7 +736,7 @@ function HeroMetric({
         {title}
       </p>
 
-      <p className={`mt-3 text-3xl font-black ${colors[tone]}`}>
+      <p className={`mt-3 text-base md:text-xl md:text-3xl font-black ${colors[tone]}`}>
         {value}
       </p>
     </div>
@@ -774,8 +774,8 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-      <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+    <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 md:p-6 backdrop-blur-xl">
+      <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
         {title}
       </p>
 
@@ -798,7 +798,7 @@ function MarketCard({
   type: "players" | "managers" | "auctions";
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-[2rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/10 via-white/[0.03] to-black p-7 transition duration-300 hover:-translate-y-1 hover:border-lime-300 hover:shadow-[0_0_40px_rgba(132,204,22,0.18)]">
+    <div className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/10 via-white/[0.03] to-black p-5 md:p-7 transition duration-300 hover:-translate-y-1 hover:border-lime-300 hover:shadow-[0_0_40px_rgba(132,204,22,0.18)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(132,204,22,0.20),transparent_45%)] opacity-80" />
       <div className="relative z-10 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-lime-400/35 bg-black/55">
         <MarketIcon type={type} />
@@ -808,7 +808,7 @@ function MarketCard({
         {title}
       </p>
 
-      <p className="relative z-10 mt-3 text-6xl font-black text-white">
+      <p className="relative z-10 mt-3 text-2xl md:text-4xl md:text-6xl font-black text-white">
         {value}
       </p>
 
@@ -896,7 +896,7 @@ function PlayerMiniCard({
               </p>
             </div>
 
-            <span className={`rounded-xl bg-gradient-to-br px-3 py-2 text-lg font-black ${ovrColor(player.overall)}`}>
+            <span className={`rounded-xl bg-gradient-to-br px-3 py-2 text-base md:text-lg font-black ${ovrColor(player.overall)}`}>
               {player.overall || "—"}
             </span>
           </div>
@@ -921,14 +921,14 @@ function FreePlayerCard({ player }: { player: any }) {
               className="h-20 object-contain"
             />
           ) : (
-            <span className="mb-4 text-3xl">👤</span>
+            <span className="mb-4 text-base md:text-xl md:text-3xl">👤</span>
           )}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h4 className="truncate text-xl font-black">{player.name}</h4>
+              <h4 className="truncate text-base md:text-xl font-black">{player.name}</h4>
               <p className="mt-1 text-sm text-zinc-400">
                 {player.position || "N/D"} • {player.team || "N/D"}
               </p>
@@ -947,7 +947,7 @@ function FreePlayerCard({ player }: { player: any }) {
 function AuctionCard({ auction }: { auction: any }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/35 p-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <p className="font-black">
             Asta #{auction.id}
@@ -978,7 +978,7 @@ function AuctionCard({ auction }: { auction: any }) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-6 text-zinc-400">
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 md:p-6 text-zinc-400">
       {text}
     </div>
   );
