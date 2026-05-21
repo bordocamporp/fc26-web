@@ -5,7 +5,8 @@ export const dynamic = "force-dynamic";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  { auth: { persistSession: false } }
 );
 
 export async function POST(request: NextRequest) {
@@ -21,12 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Partita non valida." }, { status: 400 });
   }
 
-  if (homeScore === 0 && awayScore === 0) {
-    return NextResponse.json(
-      { error: "Inserisci almeno un marcatore." },
-      { status: 400 }
-    );
-  }
+  // 0-0 consentito: nessun blocco se non ci sono marcatori.
 
   const opponentDiscordId =
     String(match.home_user_id || "") === userId
@@ -74,12 +70,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: scorerError.message }, { status: 500 });
     }
   }
-
-  /*
-    Prossimo step bot:
-    Il bot può controllare pending_match_results con status='pending_confirmation'
-    e mandare DM all'opponent_discord_id con Conferma/Contesta.
-  */
 
   return NextResponse.json({ ok: true, pending_result_id: pending.id });
 }
