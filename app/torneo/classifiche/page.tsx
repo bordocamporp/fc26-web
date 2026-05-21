@@ -109,8 +109,8 @@ export default async function ClassifichePage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <section className="border-b border-lime-500/20 px-6 py-14">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6">
+      <section className="border-b border-lime-500/20 px-4 md:px-6 py-8 md:py-10 md:py-14">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 md:p-6">
           <div className="flex items-center gap-5">
             <Image
               src="/logo-bordo-campo.png"
@@ -122,11 +122,11 @@ export default async function ClassifichePage() {
             />
 
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.4em] text-lime-400">
+              <p className="text-sm font-black uppercase tracking-[0.22em] md:tracking-[0.4em] text-lime-400">
                 Torneo BC FC
               </p>
 
-              <h1 className="mt-2 text-5xl font-black uppercase">
+              <h1 className="mt-2 text-base md:text-xl md:text-3xl md:text-5xl font-black uppercase">
                 Classifiche
               </h1>
             </div>
@@ -134,14 +134,14 @@ export default async function ClassifichePage() {
 
           <Link
             href="/torneo"
-            className="rounded-2xl bg-lime-400 px-8 py-5 text-lg font-black text-black transition hover:scale-105"
+            className="rounded-2xl bg-lime-400 px-4 py-4 md:px-4 md:px-8 md:py-5 text-base md:text-lg font-black text-black transition hover:scale-105"
           >
             TORNA AL TORNEO
           </Link>
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl space-y-20 px-6 py-16">
+      <div className="mx-auto max-w-7xl space-y-20 px-4 md:px-6 py-8 md:py-10 md:py-16">
         <CompetitionSection
           category="Campionati"
           rows={grouped.Campionati}
@@ -178,15 +178,15 @@ function CompetitionSection({
   return (
     <section>
       <div className="mb-10">
-        <p className="text-sm font-black uppercase tracking-[0.4em] text-lime-400">
+        <p className="text-sm font-black uppercase tracking-[0.22em] md:tracking-[0.4em] text-lime-400">
           BC FC
         </p>
 
-        <h2 className="mt-3 text-6xl font-black">{category}</h2>
+        <h2 className="mt-3 text-2xl md:text-4xl md:text-6xl font-black">{category}</h2>
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-10 text-xl text-zinc-400">
+        <div className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.03] p-4 md:p-6 md:p-10 text-base md:text-xl text-zinc-400">
           Nessuna classifica disponibile.
         </div>
       ) : (
@@ -212,24 +212,24 @@ function StandingTable({
   clubs: StandingRow[];
 }) {
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-xl">
-      <div className="border-b border-white/10 px-8 py-6">
-        <h3 className="text-3xl font-black">{competition}</h3>
+    <div className="overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-xl">
+      <div className="border-b border-white/10 px-4 md:px-8 py-6">
+        <h3 className="text-base md:text-xl md:text-3xl font-black">{competition}</h3>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px]">
+        <table className="w-full min-w-[760px]">
           <thead>
             <tr className="border-b border-white/10 text-sm uppercase tracking-[0.2em] text-zinc-500">
-              <th className="px-6 py-5 text-left">#</th>
-              <th className="px-6 py-5 text-left">Club</th>
+              <th className="px-4 md:px-6 py-5 text-left">#</th>
+              <th className="px-4 md:px-6 py-5 text-left">Club</th>
               <th className="px-4 py-5 text-center">PG</th>
               <th className="px-4 py-5 text-center">V</th>
               <th className="px-4 py-5 text-center">N</th>
               <th className="px-4 py-5 text-center">P</th>
               <th className="px-4 py-5 text-center">GF</th>
               <th className="px-4 py-5 text-center">GS</th>
-              <th className="px-6 py-5 text-center">PT</th>
+              <th className="px-4 md:px-6 py-5 text-center">PT</th>
             </tr>
           </thead>
 
@@ -239,7 +239,7 @@ function StandingTable({
                 key={club.id}
                 className="border-b border-white/5 transition hover:bg-lime-400/5"
               >
-                <td className="px-6 py-5">
+                <td className="px-4 md:px-6 py-5">
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-xl font-black ${
                       index === 0 ? "bg-lime-400 text-black" : "bg-white/10"
@@ -249,7 +249,7 @@ function StandingTable({
                   </div>
                 </td>
 
-                <td className="px-6 py-5">
+                <td className="px-4 md:px-6 py-5">
                   <ClubCell club={club} />
                 </td>
 
@@ -260,7 +260,7 @@ function StandingTable({
                 <td className="px-4 py-5 text-center">{club.goals_for || 0}</td>
                 <td className="px-4 py-5 text-center">{club.goals_against || 0}</td>
 
-                <td className="px-6 py-5 text-center">
+                <td className="px-4 md:px-6 py-5 text-center">
                   <div className="inline-flex rounded-xl bg-lime-400 px-4 py-2 font-black text-black">
                     {club.points || 0}
                   </div>
@@ -282,15 +282,15 @@ function CupBracket({
   clubs: StandingRow[];
 }) {
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-xl">
-      <div className="border-b border-white/10 px-8 py-6">
-        <p className="text-xs font-black uppercase tracking-[0.35em] text-orange-400">
+    <div className="overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-xl">
+      <div className="border-b border-white/10 px-4 md:px-8 py-6">
+        <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-orange-400">
           Tabellone eliminazione diretta
         </p>
-        <h3 className="mt-2 text-3xl font-black">{competition}</h3>
+        <h3 className="mt-2 text-base md:text-xl md:text-3xl font-black">{competition}</h3>
       </div>
 
-      <div className="grid gap-6 p-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:p-6 p-4 md:p-6 md:grid-cols-2 xl:grid-cols-4">
         <BracketColumn title="Ottavi" clubs={clubs.slice(0, 8)} />
         <BracketColumn title="Quarti" clubs={clubs.slice(0, 4)} locked />
         <BracketColumn title="Semifinali" clubs={clubs.slice(0, 2)} locked />
@@ -326,7 +326,7 @@ function BracketColumn({
               key={`${title}-${club.id}`}
               className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-black text-white">
                     {club.club_name || "Club"}
@@ -362,7 +362,7 @@ function ClubCell({ club }: { club: StandingRow }) {
       </div>
 
       <div>
-        <p className="text-lg font-bold">{club.club_name}</p>
+        <p className="text-base md:text-lg font-bold">{club.club_name}</p>
       </div>
     </div>
   );
