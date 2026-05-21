@@ -196,11 +196,12 @@ export default function Home() {
 
       <section className="relative min-h-screen">
         <div
-          className="absolute inset-0 bg-cover bg-center transition-all duration-1000"
+          className="absolute inset-0 bg-black bg-cover bg-center bg-no-repeat transition-all duration-1000 md:bg-contain"
           style={{ backgroundImage: `url('${current.image}')` }}
         />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/30" />
+        <div className="absolute inset-0 bg-black/35" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/25" />
 
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(132,204,22,0.18),transparent_35%)]" />
 
