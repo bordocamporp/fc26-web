@@ -51,6 +51,7 @@ const cards = [
     visual: "from-lime-400/40 via-emerald-500/20 to-black",
     badge: "FC26",
     button: "/torneo",
+    buttonText: "TORNEO",
   },
   {
     title: "CALCIO",
@@ -58,6 +59,7 @@ const cards = [
     visual: "from-green-500/35 via-lime-400/15 to-black",
     badge: "CALCIO",
     button: "/calcio",
+    buttonText: "CALCIO",
   },
   {
     title: "GAMING",
@@ -65,6 +67,7 @@ const cards = [
     visual: "from-violet-500/35 via-cyan-400/15 to-black",
     badge: "GAMING",
     button: "/gaming",
+    buttonText: "GAMING",
   },
 ];
 
