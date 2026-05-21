@@ -209,10 +209,7 @@ export default function TorneoRisultatiPage() {
       selectedMatch.away_club
     );
 
-    if (homeTotal === 0 && awayTotal === 0) {
-      setMessage("❌ Inserisci almeno un marcatore prima di inviare.");
-      return;
-    }
+    // 0-0 è valido: nessun controllo obbligatorio sui marcatori.
 
     setSaving(true);
     setMessage("");
@@ -236,7 +233,7 @@ export default function TorneoRisultatiPage() {
         throw new Error(data?.error || "Errore invio risultato.");
       }
 
-      setMessage("✅ Risultato inviato. Ora deve essere confermato dall’avversario su Discord.");
+      setMessage("✅ Risultato inviato. L’avversario riceverà la conferma in privato su Discord.");
       setHomeGoals({});
       setAwayGoals({});
       await load();
@@ -260,7 +257,7 @@ export default function TorneoRisultatiPage() {
                 Inserisci risultato
               </h1>
               <p className="mt-3 max-w-2xl text-sm text-zinc-400">
-                Seleziona la partita, scegli i marcatori dalle card e il risultato viene calcolato automaticamente.
+                Seleziona la partita, scegli i marcatori dalle card e il risultato viene calcolato automaticamente. Anche 0-0 è valido.
               </p>
             </div>
 
