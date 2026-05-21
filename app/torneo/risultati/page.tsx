@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 type Player = {
   id: string | number;
@@ -8,6 +9,10 @@ type Player = {
   position?: string | null;
   overall?: number | string | null;
   team?: string | null;
+  image_url?: string | null;
+  card_url?: string | null;
+  photo_url?: string | null;
+  avatar_url?: string | null;
 };
 
 type Match = {
@@ -25,18 +30,17 @@ type Match = {
   away_players: Player[];
 };
 
-type Scorer = {
-  player_id: string;
-  player_name: string;
-  club_name: string;
-  goals: number;
-};
-
-function normalize(value: string) {
-  return value.toLowerCase().trim();
+function getPlayerImage(player: Player) {
+  return (
+    player.card_url ||
+    player.image_url ||
+    player.photo_url ||
+    player.avatar_url ||
+    ""
+  );
 }
 
-function PlayerCard({
+function PlayerMiniCard({
   player,
   club,
   selectedGoals,
@@ -47,55 +51,66 @@ function PlayerCard({
   selectedGoals: number;
   onChange: (goals: number) => void;
 }) {
-  const initials = player.name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const image = getPlayerImage(player);
 
   return (
     <div
-      className={`rounded-[1.6rem] border p-4 transition ${
+      className={`grid grid-cols-[54px_1fr_auto] items-center gap-3 rounded-2xl border p-2.5 transition ${
         selectedGoals > 0
-          ? "border-lime-400 bg-lime-400/10 shadow-[0_0_30px_rgba(132,204,22,0.18)]"
+          ? "border-lime-400 bg-lime-400/10 shadow-[0_0_20px_rgba(132,204,22,0.16)]"
           : "border-white/10 bg-white/[0.035] hover:border-lime-400/40"
       }`}
     >
-      <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-lg font-black text-lime-400">
-          {initials}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-black text-white">{player.name}</p>
-          <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-            {player.position || "Player"} {player.overall ? `• OVR ${player.overall}` : ""}
-          </p>
-          <p className="mt-1 truncate text-xs text-zinc-400">{club}</p>
-        </div>
+      <div className="relative h-[62px] w-[54px] overflow-hidden rounded-xl bg-zinc-900">
+        {image ? (
+          <Image
+            src={image}
+            alt={player.name}
+            fill
+            className="object-cover"
+            sizes="54px"
+            unoptimized
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/10 text-sm font-black text-lime-400">
+            {player.name
+              .split(" ")
+              .map((part) => part[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </div>
+        )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 p-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-black text-white">{player.name}</p>
+        <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+          {player.position || "Player"} {player.overall ? `• OVR ${player.overall}` : ""}
+        </p>
+        <p className="mt-0.5 truncate text-[10px] text-zinc-500">{club}</p>
+      </div>
+
+      <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-black/35 p-1">
         <button
           type="button"
           onClick={() => onChange(Math.max(0, selectedGoals - 1))}
-          className="h-10 w-10 rounded-xl bg-white/10 text-xl font-black text-white transition hover:bg-red-400 hover:text-black"
+          className="h-8 w-8 rounded-lg bg-white/10 text-base font-black text-white transition hover:bg-red-400 hover:text-black"
         >
           -
         </button>
 
-        <div className="text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500">
+        <div className="w-8 text-center">
+          <p className="text-[8px] font-black uppercase tracking-[0.18em] text-zinc-500">
             Gol
           </p>
-          <p className="text-2xl font-black text-lime-400">{selectedGoals}</p>
+          <p className="text-lg font-black leading-none text-lime-400">{selectedGoals}</p>
         </div>
 
         <button
           type="button"
           onClick={() => onChange(Math.min(12, selectedGoals + 1))}
-          className="h-10 w-10 rounded-xl bg-lime-400 text-xl font-black text-black transition hover:scale-105"
+          className="h-8 w-8 rounded-lg bg-lime-400 text-base font-black text-black transition hover:scale-105"
         >
           +
         </button>
@@ -104,10 +119,10 @@ function PlayerCard({
   );
 }
 
-export default function ManagerRisultatiPage() {
-  const [sessionUserId, setSessionUserId] = useState<string>("");
+export default function TorneoRisultatiPage() {
+  const [sessionUserId, setSessionUserId] = useState("");
   const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedMatchId, setSelectedMatchId] = useState<string>("");
+  const [selectedMatchId, setSelectedMatchId] = useState("");
   const [homeGoals, setHomeGoals] = useState<Record<string, number>>({});
   const [awayGoals, setAwayGoals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -202,16 +217,6 @@ export default function ManagerRisultatiPage() {
       return;
     }
 
-    if (homeScorers.reduce((s, p) => s + p.goals, 0) !== homeTotal) {
-      setMessage("❌ Errore nel conteggio marcatori casa.");
-      return;
-    }
-
-    if (awayScorers.reduce((s, p) => s + p.goals, 0) !== awayTotal) {
-      setMessage("❌ Errore nel conteggio marcatori trasferta.");
-      return;
-    }
-
     setSaving(true);
     setMessage("");
 
@@ -234,9 +239,7 @@ export default function ManagerRisultatiPage() {
         throw new Error(data?.error || "Errore invio risultato.");
       }
 
-      setMessage(
-        "✅ Risultato inviato. Ora deve essere confermato dall’avversario su Discord."
-      );
+      setMessage("✅ Risultato inviato. Ora deve essere confermato dall’avversario su Discord.");
       setHomeGoals({});
       setAwayGoals({});
       await load();
@@ -249,25 +252,24 @@ export default function ManagerRisultatiPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <section className="border-b border-lime-400/20 bg-[radial-gradient(circle_at_top_left,rgba(132,204,22,0.18),transparent_35%),linear-gradient(180deg,#050505,#000)] px-4 py-8 md:px-8 md:py-12">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+      <section className="border-b border-lime-400/20 bg-[radial-gradient(circle_at_top_left,rgba(132,204,22,0.18),transparent_35%),linear-gradient(180deg,#050505,#000)] px-4 py-6 md:px-8 md:py-8">
+        <div className="mx-auto max-w-[1500px]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
                 Area Manager
               </p>
-              <h1 className="mt-3 text-4xl font-black uppercase leading-none md:text-7xl">
+              <h1 className="mt-2 text-4xl font-black uppercase leading-none md:text-6xl">
                 Inserisci risultato
               </h1>
-              <p className="mt-4 max-w-2xl text-sm text-zinc-400 md:text-base">
-                Seleziona la partita, scegli i marcatori dalle card e il risultato
-                viene calcolato automaticamente.
+              <p className="mt-3 max-w-2xl text-sm text-zinc-400">
+                Seleziona la partita, scegli i marcatori dalle card e il risultato viene calcolato automaticamente.
               </p>
             </div>
 
             <a
               href="/manager"
-              className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-wider text-white transition hover:border-lime-400 hover:text-lime-400"
+              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center text-xs font-black uppercase tracking-wider text-white transition hover:border-lime-400 hover:text-lime-400"
             >
               Torna manager
             </a>
@@ -275,54 +277,54 @@ export default function ManagerRisultatiPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-12">
+      <section className="mx-auto max-w-[1500px] px-4 py-6 md:px-8">
         {message && (
-          <div className="mb-6 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-zinc-200">
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-bold text-zinc-200">
             {message}
           </div>
         )}
 
         {loading ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-8 text-zinc-400">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6 text-zinc-400">
             Caricamento partite...
           </div>
         ) : matches.length === 0 ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-8 text-zinc-400">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6 text-zinc-400">
             Nessuna partita attiva da disputare.
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-            <aside className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-4 md:p-6">
+          <div className="grid gap-5 lg:grid-cols-[410px_1fr] xl:grid-cols-[460px_1fr]">
+            <aside className="max-h-[calc(100vh-190px)] overflow-y-auto rounded-[1.7rem] border border-white/10 bg-white/[0.035] p-4">
               <p className="text-xs font-black uppercase tracking-[0.25em] text-lime-400">
                 Partite attive
               </p>
 
-              <div className="mt-5 space-y-3">
-                {matches.map((match) => {
+              <div className="mt-4 space-y-2.5">
+                {matches.map((match, index) => {
                   const selected = String(match.id) === String(selectedMatchId);
 
                   return (
                     <button
-                      key={`${match.source_table}-${match.id}`}
+                      key={`${match.source_table}-${match.id}-${index}`}
                       type="button"
                       onClick={() => {
                         setSelectedMatchId(String(match.id));
                         setHomeGoals({});
                         setAwayGoals({});
                       }}
-                      className={`w-full rounded-[1.5rem] border p-4 text-left transition ${
+                      className={`w-full rounded-2xl border p-3 text-left transition ${
                         selected
                           ? "border-lime-400 bg-lime-400/10"
                           : "border-white/10 bg-black/30 hover:border-lime-400/40"
                       }`}
                     >
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
                         {match.competition_name} • {match.round || "Turno"}
                       </p>
-                      <p className="mt-2 text-lg font-black text-white">
+                      <p className="mt-1.5 truncate text-base font-black text-white">
                         {match.home_club} vs {match.away_club}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-500">
+                      <p className="mt-1 text-[11px] text-zinc-500">
                         {match.competition_type} {match.leg ? `• ${match.leg}` : ""}
                       </p>
                     </button>
@@ -332,12 +334,12 @@ export default function ManagerRisultatiPage() {
             </aside>
 
             {selectedMatch && (
-              <div className="space-y-6">
-                <div className="rounded-[2rem] border border-lime-400/20 bg-lime-400/10 p-6">
+              <div className="space-y-5">
+                <div className="rounded-[1.7rem] border border-lime-400/20 bg-lime-400/10 p-5">
                   <p className="text-xs font-black uppercase tracking-[0.25em] text-lime-400">
                     Risultato calcolato
                   </p>
-                  <h2 className="mt-3 text-3xl font-black md:text-5xl">
+                  <h2 className="mt-2 text-3xl font-black md:text-5xl">
                     {selectedMatch.home_club}{" "}
                     <span className="text-lime-400">{homeTotal}</span> -{" "}
                     <span className="text-lime-400">{awayTotal}</span>{" "}
@@ -345,24 +347,24 @@ export default function ManagerRisultatiPage() {
                   </h2>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-4 md:p-6">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
+                <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.035] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
                       <p className="text-xs font-black uppercase tracking-[0.25em] text-lime-400">
                         Squadra casa
                       </p>
-                      <h3 className="mt-2 text-2xl font-black md:text-4xl">
+                      <h3 className="mt-1 truncate text-2xl font-black md:text-3xl">
                         {selectedMatch.home_club}
                       </h3>
                     </div>
-                    <div className="rounded-2xl bg-lime-400 px-5 py-3 text-2xl font-black text-black">
+                    <div className="rounded-2xl bg-lime-400 px-4 py-2 text-2xl font-black text-black">
                       {homeTotal}
                     </div>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="mt-4 grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
                     {selectedMatch.home_players.map((player) => (
-                      <PlayerCard
+                      <PlayerMiniCard
                         key={String(player.id)}
                         player={player}
                         club={selectedMatch.home_club}
@@ -378,24 +380,24 @@ export default function ManagerRisultatiPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-4 md:p-6">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
+                <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.035] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
                       <p className="text-xs font-black uppercase tracking-[0.25em] text-lime-400">
                         Squadra trasferta
                       </p>
-                      <h3 className="mt-2 text-2xl font-black md:text-4xl">
+                      <h3 className="mt-1 truncate text-2xl font-black md:text-3xl">
                         {selectedMatch.away_club}
                       </h3>
                     </div>
-                    <div className="rounded-2xl bg-lime-400 px-5 py-3 text-2xl font-black text-black">
+                    <div className="rounded-2xl bg-lime-400 px-4 py-2 text-2xl font-black text-black">
                       {awayTotal}
                     </div>
                   </div>
 
-                  <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="mt-4 grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
                     {selectedMatch.away_players.map((player) => (
-                      <PlayerCard
+                      <PlayerMiniCard
                         key={String(player.id)}
                         player={player}
                         club={selectedMatch.away_club}
@@ -411,12 +413,12 @@ export default function ManagerRisultatiPage() {
                   </div>
                 </div>
 
-                <div className="sticky bottom-4 rounded-[2rem] border border-white/10 bg-black/90 p-4 shadow-[0_0_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+                <div className="sticky bottom-4 rounded-[1.7rem] border border-white/10 bg-black/90 p-3 shadow-[0_0_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
                   <button
                     type="button"
                     disabled={saving}
                     onClick={submitResult}
-                    className="w-full rounded-2xl bg-lime-400 px-8 py-5 text-base font-black uppercase tracking-wider text-black transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-2xl bg-lime-400 px-8 py-4 text-sm font-black uppercase tracking-wider text-black transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving ? "Invio risultato..." : "Invia risultato per conferma"}
                   </button>
