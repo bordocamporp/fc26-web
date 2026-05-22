@@ -1,75 +1,126 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+import {
+  buildResultText,
+  formatScorers,
+  getSiteUrl,
+  getSupabaseAdmin,
+  markSourceMatchAwaiting,
+  sendDiscordDm,
+  sendDiscordMessage,
+  RESULTS_CHANNEL_ID,
+} from "../_resultShared";
 
 export const dynamic = "force-dynamic";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } }
-);
-
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  try {
+    const payload = await request.json();
+    const supabase = getSupabaseAdmin();
 
-  const match = body.match;
-  const userId = String(body.userId || "");
-  const homeScore = Number(body.home_score || 0);
-  const awayScore = Number(body.away_score || 0);
-  const scorers = Array.isArray(body.scorers) ? body.scorers : [];
+    const match = payload.match || {};
+    const sourceTable = String(match.source_table || "");
+    const sourceMatchId = String(match.id || "");
+    const submitterId = String(payload.userId || "");
 
-  if (!match?.id || !match?.source_table) {
-    return NextResponse.json({ error: "Partita non valida." }, { status: 400 });
-  }
-
-  // 0-0 consentito: nessun blocco se non ci sono marcatori.
-
-  const opponentDiscordId =
-    String(match.home_user_id || "") === userId
-      ? String(match.away_user_id || "")
-      : String(match.home_user_id || "");
-
-  const { data: pending, error } = await supabase
-    .from("pending_match_results")
-    .insert({
-      source_table: match.source_table,
-      source_match_id: String(match.id),
-      competition_name: match.competition_name,
-      competition_type: match.competition_type,
-      round: match.round,
-      leg: match.leg,
-      submitted_by: userId,
-      opponent_discord_id: opponentDiscordId,
-      home_team: match.home_club,
-      away_team: match.away_club,
-      home_score: homeScore,
-      away_score: awayScore,
-      status: "pending_confirmation",
-    })
-    .select("*")
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (scorers.length) {
-    const scorerRows = scorers.map((scorer: any) => ({
-      pending_result_id: pending.id,
-      player_id: String(scorer.player_id || ""),
-      player_name: String(scorer.player_name || ""),
-      club_name: String(scorer.club_name || ""),
-      goals: Number(scorer.goals || 1),
-    }));
-
-    const { error: scorerError } = await supabase
-      .from("pending_result_scorers")
-      .insert(scorerRows);
-
-    if (scorerError) {
-      return NextResponse.json({ error: scorerError.message }, { status: 500 });
+    if (!submitterId || !sourceTable || !sourceMatchId) {
+      return NextResponse.json({ error: "Dati risultato mancanti." }, { status: 400 });
     }
-  }
 
-  return NextResponse.json({ ok: true, pending_result_id: pending.id });
+    const opponentId =
+      String(match.home_user_id || "") === submitterId
+        ? String(match.away_user_id || "")
+        : String(match.home_user_id || "");
+
+    if (!opponentId) {
+      return NextResponse.json({ error: "Avversario non trovato." }, { status: 400 });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    await markSourceMatchAwaiting(sourceTable, sourceMatchId, payload);
+
+    const { data: pending, error } = await supabase
+      .from("pending_result_confirmations")
+      .insert({
+        token,
+        source_table: sourceTable,
+        source_match_id: sourceMatchId,
+        submitter_id: submitterId,
+        opponent_id: opponentId,
+        status: "pending",
+        payload,
+        expires_at: expiresAt,
+      })
+      .select("*")
+      .single();
+
+    if (error) throw error;
+
+    const siteUrl = getSiteUrl();
+    const acceptUrl = `${siteUrl}/api/manager/risultati-confirm/${token}`;
+    const contestUrl = `${siteUrl}/api/manager/risultati-contest/${token}`;
+
+    await sendDiscordDm(opponentId, {
+      embeds: [
+        {
+          title: "⚽ Conferma risultato partita",
+          description:
+            `Ti è stato inviato un risultato da confermare.\n\n` +
+            `**${match.competition_name || "Competizione"} - ${match.home_club} vs ${match.away_club}**\n\n` +
+            `🏟️ **Risultato:** ${buildResultText(payload)}\n\n` +
+            `⚽ **Marcatori**\n${formatScorers(payload.scorers || [])}\n\n` +
+            `Hai **1 ora** per accettare o contestare. Se non rispondi, il risultato sarà accettato automaticamente.`,
+          color: 0x84cc16,
+          footer: { text: "Bordo Campo FC26 • Conferma risultato" },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 5,
+              label: "✅ ACCETTA RISULTATO",
+              url: acceptUrl,
+            },
+            {
+              type: 2,
+              style: 5,
+              label: "⚠️ FAI RICORSO",
+              url: contestUrl,
+            },
+          ],
+        },
+      ],
+    });
+
+    await sendDiscordMessage(RESULTS_CHANNEL_ID, {
+      embeds: [
+        {
+          title: "⏳ RISULTATO IN ATTESA DI CONFERMA",
+          description:
+            `**${match.competition_name || "Competizione"} - ${match.home_club} vs ${match.away_club}**\n\n` +
+            `🏟️ **Risultato proposto:** ${buildResultText(payload)}\n` +
+            `👤 Inviato da: <@${submitterId}>\n` +
+            `👤 Deve confermare: <@${opponentId}>\n\n` +
+            `Scadenza conferma: <t:${Math.floor(new Date(expiresAt).getTime() / 1000)}:R>`,
+          color: 0xf59e0b,
+          footer: { text: "Bordo Campo FC26 • Attesa conferma" },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    });
+
+    return NextResponse.json({ ok: true, pending_id: pending.id });
+  } catch (error: any) {
+    console.error("[RISULTATI SUBMIT]", error);
+    return NextResponse.json(
+      { error: error?.message || "Errore invio risultato." },
+      { status: 500 }
+    );
+  }
 }
