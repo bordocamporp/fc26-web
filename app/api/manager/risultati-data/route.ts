@@ -1,172 +1,214 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } }
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-function v(row: any, keys: string[], fallback = "") {
-  for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null) return row[key];
-  }
-  return fallback;
+type AnyMatch = Record<string, any>;
+
+const ACTIVE_STATUSES = ["pending", "active", "scheduled"];
+
+function clean(value: any) {
+  return String(value || "").trim();
 }
 
-function isPlayed(row: any) {
-  const status = String(row.status || "").toLowerCase();
-  const homeGoals = row.home_goals ?? row.home_score;
-  const awayGoals = row.away_goals ?? row.away_score;
+function isActiveMatch(match: AnyMatch) {
+  const status = clean(match.status || "pending").toLowerCase();
 
-  return status === "played" || (homeGoals !== null && homeGoals !== undefined && awayGoals !== null && awayGoals !== undefined);
-}
-
-function normalize(value: unknown) {
-  return String(value || "").toLowerCase().trim();
-}
-
-async function safeRows(table: string) {
-  const { data, error } = await supabase.from(table).select("*");
-  return { rows: data || [], error: error?.message || null };
-}
-
-async function playersForClub(clubName: string) {
-  const { rows } = await safeRows("players");
-  const club = normalize(clubName);
-
-  let filtered = rows.filter((p: any) => {
-    const team = normalize(p.team || p.club_name || p.club || p.team_name);
-    return team === club || team.includes(club) || club.includes(team);
-  });
-
-  if (!filtered.length) {
-    filtered = rows.filter((p: any) => {
-      const team = normalize(p.team || p.club_name || p.club || p.team_name);
-      return club && (team.includes(club.split(" ")[0]) || club.includes(team.split(" ")[0]));
-    });
+  // Queste NON devono più uscire nella pagina risultati.
+  if (
+    status === "confirmed" ||
+    status === "played" ||
+    status === "awaiting_confirmation" ||
+    status === "contested" ||
+    status === "cancelled"
+  ) {
+    return false;
   }
 
-  return filtered.map((p: any) => ({
-    id: String(v(p, ["id", "player_id", "name"])),
-    name: String(v(p, ["name", "player_name"], "Giocatore")),
-    position: v(p, ["position", "role"], ""),
-    overall: v(p, ["overall", "ovr", "rating"], ""),
-    team: v(p, ["team", "club_name", "club", "team_name"], ""),
-    card_url: v(p, ["card_url", "image_url", "photo_url", "avatar_url"], ""),
-    image_url: v(p, ["image_url", "card_url", "photo_url", "avatar_url"], ""),
-    photo_url: v(p, ["photo_url", "image_url", "card_url", "avatar_url"], ""),
-    avatar_url: v(p, ["avatar_url", "image_url", "card_url", "photo_url"], ""),
-  }));
+  return ACTIVE_STATUSES.includes(status) || status === "";
 }
 
-export async function GET() {
+function playerSelect() {
+  return `
+    id,
+    name,
+    position,
+    overall,
+    team,
+    image_url,
+    card_url,
+    photo_url,
+    avatar_url,
+    owner_discord_id
+  `;
+}
+
+async function getPlayersByOwner(ownerDiscordId: string) {
+  const owner = clean(ownerDiscordId);
+
+  if (!owner) return [];
+
+  const { data, error } = await supabase
+    .from("players")
+    .select(playerSelect())
+    .eq("owner_discord_id", owner)
+    .order("overall", { ascending: false });
+
+  if (error) {
+    console.error("[RISULTATI DATA] players owner error", owner, error);
+    return [];
+  }
+
+  return data || [];
+}
+
+async function getChampionshipMatches(userId: string) {
+  const { data, error } = await supabase
+    .from("championship_matches")
+    .select(`
+      *,
+      championships(name)
+    `)
+    .or(`home_id.eq.${userId},away_id.eq.${userId}`)
+    .order("round_number", { ascending: true });
+
+  if (error) {
+    console.error("[RISULTATI DATA] championship error", error);
+    return [];
+  }
+
+  return (data || [])
+    .filter(isActiveMatch)
+    .map((match: AnyMatch) => ({
+      id: match.id,
+      source_table: "championship_matches",
+      competition_name: match.championships?.name || "Campionato",
+      competition_type: "Campionati",
+      round: `Giornata ${match.round_number || "-"}`,
+      leg: match.leg || match.phase || null,
+      home_user_id: clean(match.home_id),
+      away_user_id: clean(match.away_id),
+      home_club: match.home_name || "Casa",
+      away_club: match.away_name || "Trasferta",
+    }));
+}
+
+async function getNationalCupMatches(userId: string) {
+  const { data, error } = await supabase
+    .from("national_cup_matches")
+    .select(`
+      *,
+      national_cups(name)
+    `)
+    .or(`home_id.eq.${userId},away_id.eq.${userId}`)
+    .order("round_number", { ascending: true });
+
+  if (error) {
+    console.error("[RISULTATI DATA] national cup error", error);
+    return [];
+  }
+
+  return (data || [])
+    .filter(isActiveMatch)
+    .map((match: AnyMatch) => ({
+      id: match.id,
+      source_table: "national_cup_matches",
+      competition_name: match.national_cups?.name || "Coppa Nazionale",
+      competition_type: "Coppa Nazionale",
+      round: `Turno ${match.round_number || "-"}`,
+      leg: match.leg || match.phase || null,
+      home_user_id: clean(match.home_id),
+      away_user_id: clean(match.away_id),
+      home_club: match.home_name || "Casa",
+      away_club: match.away_name || "Trasferta",
+    }));
+}
+
+async function getEuropeanCupMatches(userId: string) {
+  const { data, error } = await supabase
+    .from("european_cup_matches")
+    .select(`
+      *,
+      european_cups(name)
+    `)
+    .or(`home_id.eq.${userId},away_id.eq.${userId}`)
+    .order("round_number", { ascending: true });
+
+  if (error) {
+    // Se la tabella non esiste nel tuo DB, ignora.
+    return [];
+  }
+
+  return (data || [])
+    .filter(isActiveMatch)
+    .map((match: AnyMatch) => ({
+      id: match.id,
+      source_table: "european_cup_matches",
+      competition_name: match.european_cups?.name || "Coppa Europea",
+      competition_type: "Coppa Europea",
+      round: `Turno ${match.round_number || "-"}`,
+      leg: match.leg || match.phase || null,
+      home_user_id: clean(match.home_id),
+      away_user_id: clean(match.away_id),
+      home_club: match.home_name || "Casa",
+      away_club: match.away_name || "Trasferta",
+    }));
+}
+
+export async function GET(request: NextRequest) {
   try {
-    const championship = await safeRows("championship_matches");
-    const nationalCup = await safeRows("national_cup_matches");
-    const fixtures = await safeRows("fixtures");
-    const cupMatches = await safeRows("cup_matches");
+    const { searchParams } = new URL(request.url);
+    const userId = clean(searchParams.get("userId"));
 
-    const rawMatches: any[] = [];
-
-    for (const row of championship.rows) {
-      if (isPlayed(row)) continue;
-
-      rawMatches.push({
-        id: String(row.id),
-        source_table: "championship_matches",
-        competition_name: "Campionato",
-        competition_type: "Campionati",
-        round: `Giornata ${row.round_number || ""}`,
-        leg: String(v(row, ["leg"], "")),
-        home_user_id: String(v(row, ["home_id", "home_user_id"], "")),
-        away_user_id: String(v(row, ["away_id", "away_user_id"], "")),
-        home_club: String(v(row, ["home_name", "home_club"], "Casa")),
-        away_club: String(v(row, ["away_name", "away_club"], "Trasferta")),
-      });
+    if (!userId) {
+      return NextResponse.json({ error: "UserId mancante." }, { status: 400 });
     }
 
-    for (const row of nationalCup.rows) {
-      if (isPlayed(row)) continue;
+    const rawMatches = [
+      ...(await getChampionshipMatches(userId)),
+      ...(await getNationalCupMatches(userId)),
+      ...(await getEuropeanCupMatches(userId)),
+    ];
 
-      rawMatches.push({
-        id: String(row.id),
-        source_table: "national_cup_matches",
-        competition_name: "Coppa Nazionale",
-        competition_type: "Coppa Nazionale",
-        round: `Turno ${row.round_number || ""}`,
-        leg: String(v(row, ["leg"], "unica")),
-        home_user_id: String(v(row, ["home_id", "home_user_id"], "")),
-        away_user_id: String(v(row, ["away_id", "away_user_id"], "")),
-        home_club: String(v(row, ["home_name", "home_club"], "Casa")),
-        away_club: String(v(row, ["away_name", "away_club"], "Trasferta")),
-      });
-    }
+    const ownerIds = Array.from(
+      new Set(
+        rawMatches
+          .flatMap((match) => [match.home_user_id, match.away_user_id])
+          .map(clean)
+          .filter(Boolean)
+      )
+    );
 
-    for (const row of fixtures.rows) {
-      if (isPlayed(row) || row.played === true) continue;
+    const playersByOwner: Record<string, any[]> = {};
 
-      rawMatches.push({
-        id: String(row.id),
-        source_table: "fixtures",
-        competition_name: String(v(row, ["competition_name"], "Competizione")),
-        competition_type: String(v(row, ["competition_type"], "Campionati")),
-        round: String(v(row, ["round"], "")),
-        leg: String(v(row, ["leg"], "")),
-        home_user_id: String(v(row, ["home_user_id", "home_id"], "")),
-        away_user_id: String(v(row, ["away_user_id", "away_id"], "")),
-        home_club: String(v(row, ["home_club", "home_name"], "Casa")),
-        away_club: String(v(row, ["away_club", "away_name"], "Trasferta")),
-      });
-    }
+    await Promise.all(
+      ownerIds.map(async (ownerId) => {
+        playersByOwner[ownerId] = await getPlayersByOwner(ownerId);
+      })
+    );
 
-    for (const row of cupMatches.rows) {
-      if (isPlayed(row)) continue;
+    const matches = rawMatches.map((match) => ({
+      ...match,
 
-      rawMatches.push({
-        id: String(row.id),
-        source_table: "cup_matches",
-        competition_name: String(v(row, ["competition_name"], "Coppa")),
-        competition_type: "Coppe Europee",
-        round: String(v(row, ["round"], `Turno ${row.round_number || ""}`)),
-        leg: String(v(row, ["leg"], "")),
-        home_user_id: String(v(row, ["home_id", "home_user_id"], "")),
-        away_user_id: String(v(row, ["away_id", "away_user_id"], "")),
-        home_club: String(v(row, ["home_name", "home_club", "home_team"], "Casa")),
-        away_club: String(v(row, ["away_name", "away_club", "away_team"], "Trasferta")),
-      });
-    }
+      // IMPORTANTISSIMO:
+      // I giocatori vengono presi da owner_discord_id.
+      // Quindi se un player è stato comprato apparirà nella nuova squadra.
+      // Se è stato ceduto sparirà dalla vecchia squadra.
+      home_players: playersByOwner[match.home_user_id] || [],
+      away_players: playersByOwner[match.away_user_id] || [],
+    }));
 
-    const seen = new Set<string>();
-    const matches = [];
-
-    for (const match of rawMatches) {
-      const key = `${match.source_table}-${match.id}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
-      matches.push({
-        ...match,
-        home_players: await playersForClub(match.home_club),
-        away_players: await playersForClub(match.away_club),
-      });
-    }
-
-    return NextResponse.json({
-      debug: {
-        usingServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-        championship_matches: championship.rows.length,
-        national_cup_matches: nationalCup.rows.length,
-        fixtures: fixtures.rows.length,
-        cup_matches: cupMatches.rows.length,
-        returned_matches: matches.length,
-      },
-      matches,
-    });
+    return NextResponse.json({ matches });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Errore API", matches: [] }, { status: 500 });
+    console.error("[RISULTATI DATA]", error);
+    return NextResponse.json(
+      { error: error?.message || "Errore caricamento risultati." },
+      { status: 500 }
+    );
   }
 }
