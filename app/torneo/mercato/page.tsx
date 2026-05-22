@@ -28,6 +28,7 @@ type PlayerResult = {
   skill_moves?: number;
   market_value?: number;
   image_url?: string;
+  card_url?: string;
   owner_tag?: string | null;
   owner_club?: string | null;
   is_owned: boolean;
@@ -35,11 +36,15 @@ type PlayerResult = {
 
 type TransferUpdate = {
   id: string | number;
-  player_name: string;
+  player_name?: string;
+  from_manager_name?: string;
+  to_manager_name?: string;
   manager_name?: string;
   price?: number;
   source?: string;
+  type?: string;
   created_at?: string;
+  description?: string;
 };
 
 function statPercent(value: any) {
@@ -91,6 +96,7 @@ function PlayerCard({ player }: { player: PlayerResult }) {
   const dribbling = player.dribbling ?? player.dri;
   const defending = player.defending ?? player.def;
   const physical = player.physical ?? player.phy;
+  const image = player.card_url || player.image_url;
 
   return (
     <article className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-black/55 p-5 transition duration-300 hover:-translate-y-1 hover:border-lime-400/60 hover:shadow-[0_0_45px_rgba(132,204,22,0.18)]">
@@ -98,9 +104,9 @@ function PlayerCard({ player }: { player: PlayerResult }) {
 
       <div className="relative z-10 flex items-start gap-4">
         <div className="flex h-24 w-24 shrink-0 items-end justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-zinc-800 to-black">
-          {player.image_url ? (
+          {image ? (
             <img
-              src={player.image_url}
+              src={image}
               alt={player.name}
               className="h-24 object-contain transition duration-300 group-hover:scale-110"
             />
@@ -132,21 +138,21 @@ function PlayerCard({ player }: { player: PlayerResult }) {
 
       <div className="relative z-10 mt-5 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
         <p className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500">
-          Proprietario
+          Stato mercato
         </p>
 
         {player.is_owned ? (
           <div className="mt-2">
             <p className="text-lg font-black text-lime-300">
-              {player.owner_tag || "Manager registrato"}
+              Assegnato a {player.owner_tag || "manager"}
             </p>
             {player.owner_club && (
-              <p className="text-sm text-zinc-400">Club: {player.owner_club}</p>
+              <p className="text-sm text-zinc-400">Club manager: {player.owner_club}</p>
             )}
           </div>
         ) : (
           <p className="mt-2 text-lg font-black text-emerald-300">
-            Libero sul mercato
+            Club libero
           </p>
         )}
       </div>
@@ -184,6 +190,28 @@ function formatDate(value?: string) {
   }
 }
 
+function updateTitle(update: TransferUpdate) {
+  return update.player_name || update.description || "Operazione mercato";
+}
+
+function updateSubtitle(update: TransferUpdate) {
+  const type = update.source || update.type || "MERCATO";
+
+  if (update.from_manager_name && update.to_manager_name) {
+    return `${type}: ${update.from_manager_name} → ${update.to_manager_name}`;
+  }
+
+  if (update.manager_name) {
+    return `${type}: ${update.manager_name}`;
+  }
+
+  if (update.to_manager_name) {
+    return `${type}: ${update.to_manager_name}`;
+  }
+
+  return type;
+}
+
 export default function MercatoPage() {
   const [query, setQuery] = useState("");
   const [players, setPlayers] = useState<PlayerResult[]>([]);
@@ -212,7 +240,7 @@ export default function MercatoPage() {
 
         setPlayers(json.players || []);
         setUpdates(json.updates || []);
-      } catch (error) {
+      } catch {
         if (!alive) return;
         setPlayers([]);
         setUpdates([]);
@@ -237,10 +265,10 @@ export default function MercatoPage() {
 
         <div className="relative z-10 mx-auto max-w-7xl">
           <a
-            href="/"
+            href="/manager"
             className="mb-8 inline-flex rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-zinc-200 transition hover:border-lime-400 hover:bg-lime-400 hover:text-black"
           >
-            ← TORNA ALLA HOME
+            ← TORNA AL MANAGER
           </a>
 
           <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
@@ -252,8 +280,8 @@ export default function MercatoPage() {
           </h1>
 
           <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
-            Le trattative si fanno solo sul bot Discord. Qui puoi consultare il database,
-            vedere statistiche, club e tag Discord del manager che possiede il giocatore.
+            Il mercato si fa sul bot Discord. Qui puoi cercare tutti i giocatori del database
+            e vedere se sono liberi o assegnati a un manager.
           </p>
 
           <div className="mt-8 max-w-3xl rounded-[2rem] border border-lime-400/25 bg-black/65 p-4 shadow-[0_0_50px_rgba(132,204,22,0.12)] backdrop-blur-xl">
@@ -261,23 +289,12 @@ export default function MercatoPage() {
               Filtro mercato
             </label>
 
-            <div className="mt-3 flex flex-col gap-3 md:flex-row">
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cerca giocatore, club, ruolo, nazione..."
-                className="min-h-[58px] flex-1 rounded-2xl border border-white/10 bg-white/[0.06] px-5 text-base font-bold text-white outline-none transition placeholder:text-zinc-500 focus:border-lime-400"
-              />
-
-              <a
-                href="https://discord.gg/WJXXcGr2J3"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-[58px] items-center justify-center rounded-2xl bg-lime-400 px-6 text-center font-black text-black shadow-[0_0_30px_rgba(132,204,22,0.30)] transition hover:scale-105 hover:bg-lime-300"
-              >
-                APRI DISCORD
-              </a>
-            </div>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Cerca giocatore, club, ruolo, nazione..."
+              className="mt-3 min-h-[58px] w-full rounded-2xl border border-white/10 bg-white/[0.06] px-5 text-base font-bold text-white outline-none transition placeholder:text-zinc-500 focus:border-lime-400"
+            />
           </div>
         </div>
       </section>
@@ -301,7 +318,7 @@ export default function MercatoPage() {
           {!cleanQuery && (
             <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-zinc-300">
               Scrivi il nome di un giocatore per vedere la card completa con statistiche,
-              club e proprietario. Non mostriamo ID Discord, solo il tag/nome manager.
+              club e stato mercato.
             </div>
           )}
 
@@ -329,7 +346,7 @@ export default function MercatoPage() {
             <h2 className="mt-3 text-3xl font-black">Ultime operazioni</h2>
 
             <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              Storico aggiornato dal bot Discord quando vengono registrate aste, trasferimenti o operazioni.
+              Qui compaiono aste, trasferimenti e scambi registrati dal bot Discord.
             </p>
 
             <div className="mt-6 space-y-3">
@@ -345,22 +362,20 @@ export default function MercatoPage() {
                   >
                     <div className="mb-2 flex items-center justify-between gap-3 text-xs">
                       <span className="rounded-full bg-lime-400 px-3 py-1 font-black text-black">
-                        {update.source || "MERCATO"}
+                        {update.source || update.type || "MERCATO"}
                       </span>
                       <span className="text-zinc-500">{formatDate(update.created_at)}</span>
                     </div>
 
                     <p className="text-lg font-black text-white">
-                      {update.player_name}
+                      {updateTitle(update)}
                     </p>
 
-                    {update.manager_name && (
-                      <p className="mt-1 text-sm text-zinc-400">
-                        Manager: {update.manager_name}
-                      </p>
-                    )}
+                    <p className="mt-1 text-sm text-zinc-400">
+                      {updateSubtitle(update)}
+                    </p>
 
-                    {update.price !== undefined && (
+                    {update.price !== undefined && update.price !== null && (
                       <p className="mt-2 text-sm font-black text-lime-300">
                         Prezzo: {update.price} crediti
                       </p>
@@ -377,12 +392,11 @@ export default function MercatoPage() {
             </p>
 
             <h3 className="mt-3 text-2xl font-black">
-              Le trattative si fanno sul bot Discord
+              Aste e scambi solo dal bot Discord
             </h3>
 
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-              Questa pagina serve solo per cercare giocatori e vedere aggiornamenti.
-              Offerte, aste e scambi devono passare dal server Discord.
+              Questa pagina serve solo per consultare il database e controllare gli aggiornamenti.
             </p>
           </div>
         </aside>
