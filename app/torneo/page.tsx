@@ -125,6 +125,7 @@ export default async function TorneoPage() {
             <TopNav href="/torneo/classifiche" label="Classifiche" />
             <TopNav href="/torneo/calendario" label="Calendario" />
             <TopNav href="/torneo/risultati" label="Risultati" />
+            <TopNav href="#regolamenti" label="Regolamenti" />
             <TopNav href="/torneo/mercato" label="Mercato" active />
           </nav>
 
@@ -230,6 +231,45 @@ export default async function TorneoPage() {
             </div>
           </div>
 
+          <div
+            id="regolamenti"
+            className="rounded-[1.5rem] md:rounded-[2rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/10 via-white/[0.04] to-black p-4 md:p-6 backdrop-blur-xl"
+          >
+            <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
+              Regolamenti
+            </p>
+
+            <div className="mt-6 grid gap-3">
+              <a
+                href="https://docs.google.com/document/d/1O3fNMuZZMhZgawz995HsOotnJMW67CT_69CDrFl4PuA/edit?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block rounded-2xl border border-white/10 bg-black/35 px-5 py-4 transition hover:border-lime-400/60 hover:bg-lime-400/10"
+              >
+                <p className="font-black uppercase text-white group-hover:text-lime-300">
+                  Regolamento generale
+                </p>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Regole generali del torneo, iscrizioni, gestione squadre e comportamento.
+                </p>
+              </a>
+
+              <a
+                href="https://docs.google.com/document/d/19_nmkvd0krLhyXttODqzN0x8rwamJ4GNGY1x_fSDRJA/edit?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block rounded-2xl border border-white/10 bg-black/35 px-5 py-4 transition hover:border-lime-400/60 hover:bg-lime-400/10"
+              >
+                <p className="font-black uppercase text-white group-hover:text-lime-300">
+                  Regolamento partita
+                </p>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Regole per disputare, confermare e contestare le partite.
+                </p>
+              </a>
+            </div>
+          </div>
+
           <PanelCard title="Avanzamento torneo">
             <ProgressRow label="Iscritti accettati" value={acceptedPct} />
             <ProgressRow label="Club assegnati" value={clubsPct} />
@@ -286,6 +326,12 @@ export default async function TorneoPage() {
                   title="Risultati"
                   description="Risultati ufficiali, marcatori e storico delle partite giocate."
                   type="results"
+                />
+                <FeatureCard
+                  href="#regolamenti"
+                  title="Regolamenti"
+                  description="Consulta regolamento generale e regolamento partita ufficiali."
+                  type="rules"
                 />
               </div>
             </div>
@@ -523,7 +569,7 @@ function FeatureCard({
   href: string;
   title: string;
   description: string;
-  type: "market" | "standings" | "calendar" | "results";
+  type: "market" | "standings" | "calendar" | "results" | "rules";
 }) {
   return (
     <a
@@ -606,7 +652,7 @@ function Badge({
 function TorneoIcon({
   type,
 }: {
-  type: "market" | "standings" | "calendar" | "results";
+  type: "market" | "standings" | "calendar" | "results" | "rules";
 }) {
   if (type === "market") {
     return (
@@ -635,6 +681,17 @@ function TorneoIcon({
         <rect x="18" y="22" width="60" height="56" rx="10" fill="currentColor" opacity="0.14" />
         <rect x="18" y="22" width="60" height="56" rx="10" stroke="currentColor" strokeWidth="5" />
         <path d="M30 14v16M66 14v16M20 40h56M32 54h8M46 54h8M60 54h8M32 66h8M46 66h8" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === "rules") {
+    return (
+      <svg viewBox="0 0 96 96" className="h-11 w-11 text-lime-400" fill="none">
+        <path d="M26 16h36l10 10v54H26V16Z" fill="currentColor" opacity="0.14" />
+        <path d="M26 16h36l10 10v54H26V16Z" stroke="currentColor" strokeWidth="5" strokeLinejoin="round" />
+        <path d="M60 16v14h12" stroke="currentColor" strokeWidth="5" strokeLinejoin="round" />
+        <path d="M36 42h24M36 54h24M36 66h14" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
       </svg>
     );
   }
