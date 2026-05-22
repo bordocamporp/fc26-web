@@ -168,6 +168,44 @@ async function getManagerData(discordId: string) {
   };
 }
 
+
+async function getManagerMatches(discordId: string) {
+  const cleanDiscordId = String(discordId || "").trim();
+
+  const { data } = await supabase
+    .from("championship_matches")
+    .select("*")
+    .or(`home_id.eq.${cleanDiscordId},away_id.eq.${cleanDiscordId}`)
+    .order("round_number", { ascending: true })
+    .limit(30);
+
+  return data || [];
+}
+
+async function getPlayersByOwners(ownerIds: string[]) {
+  const cleanIds = ownerIds.map((id) => String(id || "").trim()).filter(Boolean);
+
+  if (cleanIds.length === 0) {
+    return {};
+  }
+
+  const { data } = await supabase
+    .from("players")
+    .select("id,name,position,team,overall,owner_discord_id")
+    .in("owner_discord_id", cleanIds)
+    .order("overall", { ascending: false });
+
+  const grouped: Record<string, any[]> = {};
+
+  (data || []).forEach((player: any) => {
+    const owner = String(player.owner_discord_id || "");
+    if (!grouped[owner]) grouped[owner] = [];
+    grouped[owner].push(player);
+  });
+
+  return grouped;
+}
+
 export default async function ManagerPage() {
   const session = await getServerSession(authOptions);
 
@@ -190,6 +228,18 @@ export default async function ManagerPage() {
 
   const { manager, realAssignment, club, clubName, roster } =
     await getManagerData(discordId);
+
+  const matches = await getManagerMatches(discordId);
+  const opponentIds = matches
+    .map((match: any) =>
+      String(match.home_id) === String(discordId) ? match.away_id : match.home_id
+    )
+    .filter(Boolean);
+
+  const playersByOwner = await getPlayersByOwners([
+    discordId,
+    ...opponentIds,
+  ]);
 
   const avgOverall =
     roster.length > 0
@@ -315,6 +365,12 @@ export default async function ManagerPage() {
               <TopPlayerCard player={bestPlayer} />
             </section>
 
+            <MatchResultMobile
+              discordId={discordId}
+              matches={matches}
+              playersByOwner={playersByOwner}
+            />
+
             <section className="mt-8 grid gap-5 md:p-8 xl:grid-cols-[320px_1fr]">
               <aside className="rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 md:p-6 backdrop-blur-xl">
                 <p className="text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-lime-400">
@@ -392,6 +448,209 @@ export default async function ManagerPage() {
         )}
       </section>
     </main>
+  );
+}
+
+
+function MatchResultMobile({
+  discordId,
+  matches,
+  playersByOwner,
+}: {
+  discordId: string;
+  matches: any[];
+  playersByOwner: Record<string, any[]>;
+}) {
+  const pendingMatches = matches.filter((match: any) => match.status !== "confirmed");
+
+  return (
+    <section className="mt-8 md:p-8">
+      <div className="rounded-[1.5rem] border border-lime-400/25 bg-gradient-to-br from-lime-400/10 via-white/[0.04] to-black p-4 shadow-[0_0_50px_rgba(132,204,22,0.10)] md:rounded-[2rem] md:p-7">
+        <div className="mb-5">
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-lime-400">
+            Inserisci risultato
+          </p>
+
+          <h2 className="mt-2 text-2xl font-black md:text-4xl">
+            Le tue partite
+          </h2>
+
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400 md:text-base">
+            Da mobile premi sulla partita, si apre il pannello con risultato e marcatori tuoi e dell'avversario.
+          </p>
+        </div>
+
+        {pendingMatches.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-black/40 p-5 text-zinc-400">
+            Non hai partite in attesa di risultato.
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {pendingMatches.map((match: any) => {
+              const isHome = String(match.home_id) === String(discordId);
+              const myId = String(discordId);
+              const opponentId = String(isHome ? match.away_id : match.home_id);
+
+              const myTeam = isHome ? match.home_name : match.away_name;
+              const opponentTeam = isHome ? match.away_name : match.home_name;
+
+              const myPlayers = playersByOwner[myId] || [];
+              const opponentPlayers = playersByOwner[opponentId] || [];
+
+              return (
+                <details
+                  key={match.id}
+                  className="group overflow-hidden rounded-2xl border border-white/10 bg-black/45"
+                >
+                  <summary className="cursor-pointer list-none p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-lime-400">
+                          Giornata {match.round_number || "-"}
+                        </p>
+
+                        <h3 className="mt-2 truncate text-lg font-black text-white">
+                          {myTeam || "La tua squadra"} vs {opponentTeam || "Avversario"}
+                        </h3>
+
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Premi per inserire risultato e marcatori
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 rounded-xl border border-lime-400/30 bg-lime-400/10 px-4 py-2 text-xs font-black text-lime-300 group-open:bg-lime-400 group-open:text-black">
+                        APRI
+                      </span>
+                    </div>
+                  </summary>
+
+                  <form
+                    action="/api/manager/submit-result"
+                    method="POST"
+                    className="border-t border-white/10 bg-black/35 p-4"
+                  >
+                    <input type="hidden" name="match_id" value={match.id} />
+                    <input type="hidden" name="manager_id" value={discordId} />
+                    <input type="hidden" name="home_id" value={match.home_id || ""} />
+                    <input type="hidden" name="away_id" value={match.away_id || ""} />
+
+                    <div className="grid grid-cols-[1fr_80px_1fr] items-end gap-3">
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-black uppercase text-zinc-500">
+                          {match.home_name || "Casa"}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          name="home_goals"
+                          defaultValue={match.home_goals ?? ""}
+                          className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-4 text-center text-2xl font-black text-white outline-none focus:border-lime-400"
+                          placeholder="0"
+                        />
+                      </label>
+
+                      <div className="pb-4 text-center text-xl font-black text-zinc-500">
+                        VS
+                      </div>
+
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-black uppercase text-zinc-500">
+                          {match.away_name || "Trasferta"}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          name="away_goals"
+                          defaultValue={match.away_goals ?? ""}
+                          className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-4 text-center text-2xl font-black text-white outline-none focus:border-lime-400"
+                          placeholder="0"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-black/50 p-4">
+                        <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-lime-400">
+                          Marcatori tuoi
+                        </p>
+
+                        {[0, 1, 2, 3, 4].map((index) => (
+                          <div key={index} className="mb-3 grid grid-cols-[1fr_70px] gap-2 last:mb-0">
+                            <select
+                              name={`my_scorer_${index}`}
+                              className="min-w-0 rounded-xl border border-white/10 bg-black/70 px-3 py-3 text-sm text-white outline-none focus:border-lime-400"
+                            >
+                              <option value="">Seleziona giocatore</option>
+                              {myPlayers.map((player: any) => (
+                                <option key={player.id} value={player.id}>
+                                  {player.name} · {player.position}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              type="number"
+                              min="0"
+                              name={`my_scorer_goals_${index}`}
+                              placeholder="Gol"
+                              className="rounded-xl border border-white/10 bg-black/70 px-2 py-3 text-center text-sm text-white outline-none focus:border-lime-400"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/50 p-4">
+                        <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-orange-400">
+                          Marcatori avversario
+                        </p>
+
+                        {[0, 1, 2, 3, 4].map((index) => (
+                          <div key={index} className="mb-3 grid grid-cols-[1fr_70px] gap-2 last:mb-0">
+                            <select
+                              name={`opponent_scorer_${index}`}
+                              className="min-w-0 rounded-xl border border-white/10 bg-black/70 px-3 py-3 text-sm text-white outline-none focus:border-lime-400"
+                            >
+                              <option value="">Seleziona giocatore</option>
+                              {opponentPlayers.map((player: any) => (
+                                <option key={player.id} value={player.id}>
+                                  {player.name} · {player.position}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              type="number"
+                              min="0"
+                              name={`opponent_scorer_goals_${index}`}
+                              placeholder="Gol"
+                              className="rounded-xl border border-white/10 bg-black/70 px-2 py-3 text-center text-sm text-white outline-none focus:border-lime-400"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <textarea
+                      name="notes"
+                      rows={3}
+                      placeholder="Note opzionali: es. conferma avversario, rigori, problemi connessione..."
+                      className="mt-4 w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none focus:border-lime-400"
+                    />
+
+                    <button
+                      type="submit"
+                      className="mt-4 w-full rounded-2xl bg-lime-400 px-6 py-4 text-base font-black text-black shadow-[0_0_30px_rgba(132,204,22,0.30)] transition hover:scale-[1.01] hover:bg-lime-300"
+                    >
+                      INVIA RISULTATO
+                    </button>
+                  </form>
+                </details>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
