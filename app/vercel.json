@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/manager/risultati-auto-confirm",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
