@@ -22,7 +22,7 @@ const slides = [
     image: "/slides/bordo-campo-discord.jpg",
     logo: "/logo-bordo-campo.png",
     button: "https://discord.gg/WJXXcGr2J3",
-    buttonText: "ENTRA NEL DISCORD",
+    buttonText: "ENTRA NELLA LIVE",
   },
   {
     title: "FIVEM REAL RP",
@@ -299,12 +299,12 @@ export default function Home() {
               </a>
 
               <a
-                href="https://discord.gg/kB8Km94Kba"
+                href="https://discord.gg/WJXXcGr2J3"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full rounded-2xl border border-lime-400/40 bg-lime-400/10 px-8 py-4 text-center font-black text-lime-300 backdrop-blur transition hover:scale-105 hover:border-lime-400 hover:bg-lime-400/20 sm:w-auto"
               >
-            ENTRA NEL DISCORD DEL TORNEO
+            ENTRA NELLA LIVE
             </a>
             </div>
 
