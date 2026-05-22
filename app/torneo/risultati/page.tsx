@@ -233,9 +233,10 @@ export default function TorneoRisultatiPage() {
         throw new Error(data?.error || "Errore invio risultato.");
       }
 
-      setMessage("✅ Risultato inviato. L’avversario riceverà la conferma in privato su Discord.");
+      setMessage("✅ Risultato inviato. La partita sparirà dall’elenco e l’avversario riceverà la conferma in privato su Discord.");
       setHomeGoals({});
       setAwayGoals({});
+      setSelectedMatchKey("");
       await load();
     } catch (error: any) {
       setMessage(`❌ ${error.message || "Errore invio risultato."}`);
