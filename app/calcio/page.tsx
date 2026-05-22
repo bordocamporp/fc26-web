@@ -20,7 +20,7 @@ type MatchItem = {
   competition: string;
 };
 
-const DISCORD_LIVE_URL = "https://discord.gg/WJXXcGr2J3";
+const DISCORD_LIVE_URL = "https://discord.gg/racNPznyy9";
 
 const GOOGLE_NEWS_RSS =
   "https://news.google.com/rss/search?q=calcio%20OR%20calciomercato%20OR%20Serie%20A%20OR%20Champions%20League%20when:1d&hl=it&gl=IT&ceid=IT:it";
