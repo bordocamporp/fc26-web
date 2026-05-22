@@ -246,7 +246,7 @@ export default function IscrizionePage() {
               <StatusBox
                 color="orange"
                 title="Richiesta in attesa"
-                text="La tua richiesta è stata inviata. Lo staff la controllerà appena possibile."
+                text="La tua richiesta è stata inviata allo staff su Discord. Attendi l’approvazione e l’assegnazione del club."
                 buttonLabel="Torna alla Home"
                 href="/"
               />
@@ -258,7 +258,7 @@ export default function IscrizionePage() {
                 title="Richiesta rifiutata"
                 text="La tua richiesta è stata rifiutata. Puoi contattare lo staff su Discord per maggiori informazioni."
                 buttonLabel="Vai su Discord"
-                href="/discord"
+                href="https://discord.gg/kB8Km94Kba"
               />
             )}
 
