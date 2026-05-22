@@ -274,7 +274,15 @@ export default async function CalcioPage() {
               News online, risultati e classifiche in un hub pulito, moderno e aggiornato automaticamente.
             </p>
 
+
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+              <a
+                href="/"
+                className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-8 py-4 text-center text-lg font-black text-white backdrop-blur transition hover:scale-105 hover:border-lime-400 hover:bg-lime-400 hover:text-black"
+              >
+                ← TORNA ALLA HOME
+              </a>
+
               <a
                 href={DISCORD_LIVE_URL}
                 target="_blank"
