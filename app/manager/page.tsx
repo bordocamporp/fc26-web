@@ -7,7 +7,7 @@ import ClubLogo from "./ClubLogoClient";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 function n(value: any) {
@@ -95,68 +95,24 @@ async function getManagerData(discordId: string) {
     club = clubData;
   }
 
+  // Fonte ufficiale della rosa:
+  // usa SOLO owner_discord_id, così:
+  // - i giocatori comprati appaiono subito
+  // - i giocatori venduti spariscono subito
+  // - non vengono più mostrati giocatori vecchi solo perché hanno team = clubName
   let roster: any[] = [];
 
-  const { data: ownerPlayers } = await supabase
+  const { data: ownerPlayers, error: ownerPlayersError } = await supabase
     .from("players")
     .select("*")
     .eq("owner_discord_id", cleanDiscordId)
     .order("overall", { ascending: false });
 
-  if (ownerPlayers && ownerPlayers.length > 0) {
-    roster = ownerPlayers;
+  if (ownerPlayersError) {
+    console.error("[MANAGER] Errore caricamento rosa owner_discord_id:", ownerPlayersError);
   }
 
-  if (roster.length === 0 && clubName) {
-    const aliases = sameTeamFilter(clubName);
-
-    for (const alias of aliases) {
-      const { data: byTeamPlayers } = await supabase
-        .from("players")
-        .select("*")
-        .eq("team", alias)
-        .order("overall", { ascending: false });
-
-      if (byTeamPlayers && byTeamPlayers.length > 0) {
-        roster = byTeamPlayers;
-        break;
-      }
-    }
-  }
-
-  if (roster.length === 0 && clubName) {
-    const aliases = sameTeamFilter(clubName);
-
-    for (const alias of aliases) {
-      const { data: byTeamLikePlayers } = await supabase
-        .from("players")
-        .select("*")
-        .ilike("team", `%${alias}%`)
-        .order("overall", { ascending: false });
-
-      if (byTeamLikePlayers && byTeamLikePlayers.length > 0) {
-        roster = byTeamLikePlayers;
-        break;
-      }
-    }
-  }
-
-  if (roster.length === 0 && clubName) {
-    const aliases = sameTeamFilter(clubName);
-
-    for (const alias of aliases) {
-      const { data: byDatasetPlayers } = await supabase
-        .from("players_fc26")
-        .select("*")
-        .eq("team", alias)
-        .order("overall", { ascending: false });
-
-      if (byDatasetPlayers && byDatasetPlayers.length > 0) {
-        roster = byDatasetPlayers;
-        break;
-      }
-    }
-  }
+  roster = ownerPlayers || [];
 
   return {
     manager,
@@ -409,6 +365,13 @@ export default async function ManagerPage() {
                     title="RISULTATI"
                     description="Guarda gli ultimi risultati delle partite."
                     icon="ball"
+                  />
+
+                  <ManagerSideButton
+                    href="/mercato"
+                    title="MERCATO"
+                    description="Cerca giocatori e segui gli aggiornamenti dal bot Discord."
+                    icon="market"
                   />
                 </div>
               </aside>
@@ -780,7 +743,7 @@ function ManagerSideButton({
   href: string;
   title: string;
   description: string;
-  icon: "trophy" | "calendar" | "ball";
+  icon: "trophy" | "calendar" | "ball" | "market";
 }) {
   return (
     <a
@@ -808,7 +771,7 @@ function ManagerSideButton({
   );
 }
 
-function ManagerIcon({ type }: { type: "trophy" | "calendar" | "ball" }) {
+function ManagerIcon({ type }: { type: "trophy" | "calendar" | "ball" | "market" }) {
   if (type === "trophy") {
     return (
       <svg
@@ -887,6 +850,42 @@ function ManagerIcon({ type }: { type: "trophy" | "calendar" | "ball" }) {
           strokeWidth="5"
           strokeLinecap="round"
         />
+      </svg>
+    );
+  }
+
+  if (type === "market") {
+    return (
+      <svg
+        viewBox="0 0 96 96"
+        className="h-16 w-16 text-lime-400 drop-shadow-[0_0_14px_rgba(132,204,22,0.55)]"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M22 34h52l-5 42H27L22 34Z"
+          fill="currentColor"
+          opacity="0.14"
+        />
+        <path
+          d="M22 34h52l-5 42H27L22 34Z"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M34 34c0-10 6-18 14-18s14 8 14 18"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M36 52h24M36 64h18"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <circle cx="68" cy="58" r="7" fill="currentColor" />
       </svg>
     );
   }
