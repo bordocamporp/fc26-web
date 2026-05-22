@@ -11,28 +11,6 @@ type SignupStatus = {
   created_at?: string;
   handled_at?: string | null;
 };
-const ACCEPTED_ROLE_ID = "1398332847655358554";
-const SIGNUP_ROLE_ID = "1398323695558332604";
-const DISCORD_INVITE_URL = "https://discord.gg/kB8Km94Kba";
-
-function getUserRoles(user: any): string[] {
-  const possibleRoles =
-    user?.roles ||
-    user?.guildRoles ||
-    user?.discordRoles ||
-    user?.member?.roles ||
-    user?.profile?.roles ||
-    [];
-
-  if (!Array.isArray(possibleRoles)) return [];
-
-  return possibleRoles.map((role: any) => String(role?.id || role));
-}
-
-function hasRole(user: any, roleId: string) {
-  return getUserRoles(user).includes(roleId);
-}
-
 
 export default function IscrizionePage() {
   const [session, setSession] = useState<any>(null);
@@ -66,20 +44,6 @@ export default function IscrizionePage() {
 
         setSession(currentSession);
         setAuthStatus("authenticated");
-
-        const roles = getUserRoles(currentSession.user);
-
-        // Se ha già il ruolo iscritti, non deve più vedere la pagina iscrizione.
-        if (roles.includes(ACCEPTED_ROLE_ID)) {
-          window.location.href = "/manager";
-          return;
-        }
-
-        // Se ha il ruolo per iscriversi, mandalo direttamente nel server Discord.
-        if (roles.includes(SIGNUP_ROLE_ID)) {
-          window.location.href = DISCORD_INVITE_URL;
-          return;
-        }
 
         try {
           const response = await fetch("/api/signup-status", {
@@ -294,7 +258,7 @@ export default function IscrizionePage() {
                 title="Richiesta rifiutata"
                 text="La tua richiesta è stata rifiutata. Puoi contattare lo staff su Discord per maggiori informazioni."
                 buttonLabel="Vai su Discord"
-                href={DISCORD_INVITE_URL}
+                href="/discord"
               />
             )}
 
