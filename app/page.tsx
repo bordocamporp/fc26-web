@@ -21,7 +21,7 @@ const slides = [
       "Entra nella community ufficiale per seguire LIVE, aggiornamenti, tornei e contenuti gaming.",
     image: "/slides/bordo-campo-discord.jpg",
     logo: "/logo-bordo-campo.png",
-    button: "https://discord.gg/WJXXcGr2J3",
+    button: "https://discord.gg/racNPznyy9",
     buttonText: "ENTRA NELLA LIVE",
   },
   {
