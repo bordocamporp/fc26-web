@@ -1,175 +1,164 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+
+export const dynamic = "force-dynamic";
+
+const STAFF_CHANNEL_ID = "1506320879015952535";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function POST(req: Request) {
+function siteUrl() {
+  return (
+    process.env.NEXTAUTH_URL ||
+    process.env.AUTH_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://bordocampobc.com"
+  ).replace(/\/$/, "");
+}
+
+async function sendDiscordMessage(channelId: string, body: any) {
+  const token = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
+
+  if (!token) {
+    console.warn("[SIGNUP] DISCORD_BOT_TOKEN mancante");
+    return null;
+  }
+
+  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bot ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    console.error("[SIGNUP] Discord error", response.status, text);
+    return null;
+  }
+
   try {
-    const body = await req.json();
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
 
-    const {
-      discord_id,
-      discord_name,
-      platform,
-      age,
-      psn_id,
-      preferred_clubs,
-    } = body;
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
 
-    if (!discord_id || !discord_name) {
+    const discordId = String(body.discord_id || "").trim();
+    const discordName = String(body.discord_name || "Unknown").trim();
+
+    if (!discordId) {
       return NextResponse.json(
-        {
-          ok: false,
-          message: "Dati mancanti.",
-        },
+        { message: "Discord ID mancante. Effettua di nuovo il login Discord." },
         { status: 400 }
       );
     }
 
-    /*
-      CONTROLLA MANAGER
-    */
-
-    const { data: existingManager } = await supabase
-      .from("managers")
-      .select("*")
-      .eq("discord_id", discord_id)
-      .maybeSingle();
-
-    if (existingManager) {
-      return NextResponse.json({
-        ok: false,
-        message: "Sei già iscritto al torneo.",
-      });
-    }
-
-    /*
-      CONTROLLA RICHIESTA PENDING
-    */
-
-    const { data: existingRequest } = await supabase
+    const { data: existingAccepted } = await supabase
       .from("signup_requests")
       .select("*")
-      .eq("discord_id", discord_id)
-      .eq("status", "pending")
+      .eq("discord_id", discordId)
+      .eq("status", "accepted")
       .maybeSingle();
 
-    if (existingRequest) {
-      return NextResponse.json({
-        ok: false,
-        message: "Hai già una richiesta in attesa.",
-      });
-    }
-
-    /*
-      SALVA RICHIESTA
-    */
-
-    const { data, error } = await supabase
-      .from("signup_requests")
-      .insert([
-        {
-          discord_id,
-          discord_name,
-          platform,
-          age,
-          psn_id,
-          preferred_clubs,
-          status: "pending",
-          source: "website",
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error(error);
-
+    if (existingAccepted) {
       return NextResponse.json(
-        {
-          ok: false,
-          message: error.message,
-        },
-        { status: 500 }
+        { message: "Sei già iscritto.", signup: existingAccepted },
+        { status: 200 }
       );
     }
 
-    /*
-      INVIO WEBHOOK DISCORD
-    */
+    const { data: existingPending } = await supabase
+      .from("signup_requests")
+      .select("*")
+      .eq("discord_id", discordId)
+      .eq("status", "pending")
+      .maybeSingle();
 
-    try {
-      if (process.env.DISCORD_WEBHOOK_URL) {
-        await fetch(process.env.DISCORD_WEBHOOK_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            embeds: [
-              {
-                title: "📥 Nuova iscrizione torneo FC",
-                color: 5763719,
-                fields: [
-                  {
-                    name: "Discord",
-                    value: discord_name || "N/D",
-                    inline: true,
-                  },
-                  {
-                    name: "Discord ID",
-                    value: discord_id || "N/D",
-                    inline: true,
-                  },
-                  {
-                    name: "Piattaforma",
-                    value: platform || "N/D",
-                    inline: true,
-                  },
-                  {
-                    name: "Età",
-                    value: String(age || "N/D"),
-                    inline: true,
-                  },
-                  {
-                    name: "PSN / EA ID",
-                    value: psn_id || "N/D",
-                    inline: false,
-                  },
-                  {
-                    name: "Club preferiti",
-                    value: preferred_clubs || "N/D",
-                    inline: false,
-                  },
-                ],
-                footer: {
-                  text: "Bordo Campo FC",
-                },
-              },
-            ],
-          }),
-        });
-      }
-    } catch (err) {
-      console.error("Webhook Discord error:", err);
+    if (existingPending) {
+      return NextResponse.json(
+        { message: "Hai già una richiesta in attesa.", request: existingPending },
+        { status: 200 }
+      );
     }
 
-    return NextResponse.json({
-      ok: true,
-      request: data,
-      message: "Richiesta inviata correttamente.",
-    });
-  } catch (err) {
-    console.error(err);
+    const { data: created, error } = await supabase
+      .from("signup_requests")
+      .insert({
+        discord_id: discordId,
+        discord_name: discordName,
+        platform: body.platform || null,
+        age: body.age || null,
+        psn_id: body.psn_id || null,
+        preferred_clubs: body.preferred_clubs || null,
+        mode: body.mode || "fc26",
+        status: "pending",
+      })
+      .select("*")
+      .single();
 
+    if (error) throw error;
+
+    const acceptUrl = `${siteUrl()}/api/signup-accept/${created.id}`;
+    const rejectUrl = `${siteUrl()}/api/signup-reject/${created.id}`;
+
+    await sendDiscordMessage(STAFF_CHANNEL_ID, {
+      embeds: [
+        {
+          title: "📝 Nuova richiesta iscrizione FC",
+          description:
+            `**Player:** ${discordName}\n` +
+            `**Discord:** <@${discordId}>\n` +
+            `**Discord ID:** ${discordId}\n\n` +
+            `**Età:** ${body.age || "N/D"}\n` +
+            `**Piattaforma:** ${body.platform || "N/D"}\n` +
+            `**EA ID / PSN:** ${body.psn_id || "N/D"}\n` +
+            `**Club preferiti:** ${body.preferred_clubs || "N/D"}\n\n` +
+            `Lo staff può accettare assegnando un club oppure rifiutare la richiesta.`,
+          color: 0x84cc16,
+          footer: { text: `Richiesta ID ${created.id}` },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 5,
+              label: "✅ ACCETTA / ASSEGNA CLUB",
+              url: acceptUrl,
+            },
+            {
+              type: 2,
+              style: 5,
+              label: "❌ RIFIUTA",
+              url: rejectUrl,
+            },
+          ],
+        },
+      ],
+    });
+
+    return NextResponse.json({
+      message: "Richiesta inviata allo staff su Discord.",
+      request: created,
+    });
+  } catch (error: any) {
+    console.error("[SIGNUP REQUEST]", error);
     return NextResponse.json(
-      {
-        ok: false,
-        message: "Errore server.",
-      },
+      { message: error?.message || "Errore durante l'invio della richiesta." },
       { status: 500 }
     );
   }
