@@ -128,6 +128,16 @@ export default function Home() {
               <p className="text-xs text-zinc-400">
                 Football • Gaming • Esports
               </p>
+
+              <a
+                href="https://discord.gg/WJXXcGr2J3"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex animate-pulse items-center gap-2 rounded-2xl border border-red-400/40 bg-red-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-200 shadow-[0_0_25px_rgba(239,68,68,0.45)] transition hover:scale-105 hover:bg-red-500/35"
+              >
+                <span className="h-2 w-2 rounded-full bg-red-300" />
+                ENTRA NELLA LIVE
+              </a>
             </div>
           </a>
 
