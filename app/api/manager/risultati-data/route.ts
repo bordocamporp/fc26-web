@@ -14,6 +14,20 @@ function clean(value: any) {
   return String(value || "").trim();
 }
 
+function norm(value: any) {
+  return clean(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/fk/g, "")
+    .replace(/fc/g, "")
+    .replace(/cf/g, "")
+    .replace(/sk/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function hiddenStatus(statusValue: any) {
   const status = clean(statusValue || "pending").toLowerCase();
 
@@ -44,6 +58,15 @@ function playerSelect() {
   `;
 }
 
+function sameTeam(playerTeam: any, clubName: any) {
+  const a = norm(playerTeam);
+  const b = norm(clubName);
+
+  if (!a || !b) return false;
+
+  return a === b || a.includes(b) || b.includes(a);
+}
+
 async function getPlayersByOwner(ownerDiscordId: string) {
   const owner = clean(ownerDiscordId);
   if (!owner) return [];
@@ -55,54 +78,49 @@ async function getPlayersByOwner(ownerDiscordId: string) {
     .order("overall", { ascending: false });
 
   if (error) {
-    console.error("[RISULTATI DATA] players by owner error", owner, error);
+    console.error("[RISULTATI DATA] players owner error", owner, error);
     return [];
   }
 
   return data || [];
 }
 
-async function getPlayersByClubFallback(clubName: string) {
+async function getPlayersByClubFromTable(table: "players" | "players_fc26", clubName: string) {
   const club = clean(clubName);
   if (!club) return [];
 
-  // Fallback: se owner_discord_id non è aggiornato o è vuoto, almeno mostra la rosa base del club.
-  // Questo evita la pagina vuota.
+  // Non uso ILIKE perché nomi tipo Qarabağ / Qarabag, München / Munchen, ecc. non combaciano.
+  // Prendo i giocatori e filtro normalizzando in JS.
   const { data, error } = await supabase
-    .from("players")
+    .from(table)
     .select(playerSelect())
-    .ilike("team", club)
     .order("overall", { ascending: false })
-    .limit(40);
+    .limit(5000);
 
-  if (!error && data && data.length > 0) return data;
-
-  const like = `%${club}%`;
-
-  const retry = await supabase
-    .from("players")
-    .select(playerSelect())
-    .ilike("team", like)
-    .order("overall", { ascending: false })
-    .limit(40);
-
-  if (retry.error) {
-    console.error("[RISULTATI DATA] players by club fallback error", club, retry.error);
+  if (error) {
+    console.error(`[RISULTATI DATA] ${table} fallback error`, error);
     return [];
   }
 
-  return retry.data || [];
+  return (data || [])
+    .filter((player: AnyRow) => sameTeam(player.team, club))
+    .slice(0, 40);
 }
 
 async function getRoster(ownerDiscordId: string, clubName: string) {
+  // 1. Priorità assoluta: rosa aggiornata da mercato/scambi/aste.
   const byOwner = await getPlayersByOwner(ownerDiscordId);
-
-  // Se il mercato/aste/scambi aggiornano correttamente owner_discord_id, usa SEMPRE questa.
-  // Così i comprati appaiono e i ceduti spariscono.
   if (byOwner.length > 0) return byOwner;
 
-  // Se invece owner_discord_id non è ancora aggiornato nel DB, fallback sul nome club.
-  return await getPlayersByClubFallback(clubName);
+  // 2. Fallback: nome club nella tabella players.
+  const byClubPlayers = await getPlayersByClubFromTable("players", clubName);
+  if (byClubPlayers.length > 0) return byClubPlayers;
+
+  // 3. Fallback finale: dataset players_fc26 se esiste.
+  const byClubFc26 = await getPlayersByClubFromTable("players_fc26", clubName);
+  if (byClubFc26.length > 0) return byClubFc26;
+
+  return [];
 }
 
 function normalizeMatch(row: AnyRow, sourceTable: string, competitionName: string, competitionType: string) {
