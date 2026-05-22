@@ -26,10 +26,10 @@ const GOOGLE_NEWS_RSS =
   "https://news.google.com/rss/search?q=calcio%20OR%20calciomercato%20OR%20Serie%20A%20OR%20Champions%20League%20when:1d&hl=it&gl=IT&ceid=IT:it";
 
 const HERO_IMAGES = [
-  "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1800&q=80",
-  "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1800&q=80",
-  "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1800&q=80",
-  "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=1800&q=80",
+  "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1800&q=85",
+  "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1800&q=85",
+  "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1800&q=85",
+  "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=1800&q=85",
 ];
 
 export const revalidate = 300;
@@ -47,19 +47,24 @@ function decodeHtml(value: string) {
     .replace(/&amp;/g, "&");
 }
 
-function cleanText(value: string) {
+function stripHtml(value: string) {
   return decodeHtml(value)
-    .replace(/<a\b[^>]*>.*?<\/a>/gis, "")
-    .replace(/<font\b[^>]*>.*?<\/font>/gis, "")
+    .replace(/<a\b[^>]*>(.*?)<\/a>/gis, "$1")
+    .replace(/<font\b[^>]*>(.*?)<\/font>/gis, "$1")
     .replace(/<img\b[^>]*>/gis, "")
     .replace(/<[^>]*>/g, " ")
+    .replace(/https?:\/\/\S+/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function extractTag(item: string, tag: string) {
+function extractRawTag(item: string, tag: string) {
   const match = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
-  return cleanText(match?.[1] || "");
+  return match?.[1] || "";
+}
+
+function extractTag(item: string, tag: string) {
+  return stripHtml(extractRawTag(item, tag));
 }
 
 function shortTitle(title: string) {
@@ -67,6 +72,24 @@ function shortTitle(title: string) {
     .replace(/\s-\s[^-]{2,35}$/g, "")
     .replace(/\s\|\s[^|]{2,35}$/g, "")
     .trim();
+}
+
+function extractDescription(item: string) {
+  const raw = decodeHtml(extractRawTag(item, "description"));
+
+  const anchorTexts = Array.from(raw.matchAll(/<a\b[^>]*>(.*?)<\/a>/gis))
+    .map((m) => stripHtml(m[1]))
+    .filter(Boolean);
+
+  const text = stripHtml(raw);
+
+  const withoutSourceLinks = anchorTexts.length > 0
+    ? text.replace(anchorTexts.join(" "), "").trim()
+    : text;
+
+  return withoutSourceLinks.length > 60
+    ? withoutSourceLinks
+    : "Apri la fonte per leggere l’articolo completo e tutti gli aggiornamenti.";
 }
 
 async function getFootballNews(): Promise<NewsItem[]> {
@@ -79,22 +102,13 @@ async function getFootballNews(): Promise<NewsItem[]> {
     const xml = await response.text();
     const items = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
 
-    return items.slice(0, 14).map((item) => {
-      const rawTitle = extractTag(item, "title");
-      const title = shortTitle(rawTitle);
-      const description = cleanText(extractTag(item, "description"));
-
-      return {
-        title,
-        link: extractTag(item, "link"),
-        source: extractTag(item, "source") || "Google News",
-        pubDate: extractTag(item, "pubDate"),
-        description:
-          description && description.length > 35
-            ? description
-            : "Apri la notizia completa per leggere tutti i dettagli aggiornati dalla fonte.",
-      };
-    });
+    return items.slice(0, 14).map((item) => ({
+      title: shortTitle(extractTag(item, "title")),
+      link: extractTag(item, "link"),
+      source: extractTag(item, "source") || "Google News",
+      pubDate: extractTag(item, "pubDate"),
+      description: extractDescription(item),
+    }));
   } catch {
     return [];
   }
@@ -121,7 +135,7 @@ async function getStandings(): Promise<StandingRow[]> {
   const data = await footballDataFetch("/competitions/SA/standings");
   const table = data?.standings?.[0]?.table || [];
 
-  return table.slice(0, 10).map((row: any) => ({
+  return table.slice(0, 8).map((row: any) => ({
     position: row.position,
     team: row.team?.shortName || row.team?.name || "N/D",
     points: row.points || 0,
@@ -132,7 +146,7 @@ async function getMatches(): Promise<MatchItem[]> {
   const data = await footballDataFetch("/matches");
   const matches = data?.matches || [];
 
-  return matches.slice(0, 8).map((match: any) => {
+  return matches.slice(0, 6).map((match: any) => {
     const homeScore = match.score?.fullTime?.home;
     const awayScore = match.score?.fullTime?.away;
 
@@ -152,46 +166,36 @@ async function getMatches(): Promise<MatchItem[]> {
   });
 }
 
+function newsCategory(title: string) {
+  const lower = title.toLowerCase();
+  if (lower.includes("colpo") || lower.includes("mercato") || lower.includes("trasfer")) return "Mercato";
+  if (lower.includes("champions")) return "Champions";
+  if (lower.includes("mondiale") || lower.includes("world cup")) return "Mondiale";
+  if (lower.includes("serie a")) return "Serie A";
+  if (lower.includes("ufficiale")) return "Ufficiale";
+  return "News";
+}
+
 function getTheme(news: NewsItem[]) {
   const text = news.map((item) => item.title).join(" ").toLowerCase();
 
   if (text.includes("mondiale") || text.includes("world cup")) {
-    return {
-      label: "Speciale Mondiale",
-      title: "Il calcio mondiale, le notizie più calde",
-      bg: "from-sky-500/35 via-emerald-400/15 to-black",
-      icon: "🌍",
-    };
+    return { eyebrow: "Speciale mondiale", title: "Il calcio mondiale in tempo reale", icon: "🌍" };
   }
 
   if (text.includes("champions")) {
-    return {
-      label: "Champions Night",
-      title: "Champions League e grandi serate europee",
-      bg: "from-blue-700/35 via-indigo-500/15 to-black",
-      icon: "🏆",
-    };
+    return { eyebrow: "Champions focus", title: "Notizie, coppe e grandi match europei", icon: "🏆" };
   }
 
   if (text.includes("mercato") || text.includes("trasferimento") || text.includes("colpo")) {
-    return {
-      label: "Calciomercato Live",
-      title: "Colpi, trattative e ultime di mercato",
-      bg: "from-lime-400/30 via-emerald-500/15 to-black",
-      icon: "💰",
-    };
+    return { eyebrow: "Calciomercato live", title: "Colpi, trattative e aggiornamenti", icon: "💰" };
   }
 
-  return {
-    label: "Football News",
-    title: "News calcistiche live",
-    bg: "from-lime-400/25 via-emerald-500/10 to-black",
-    icon: "⚽",
-  };
+  return { eyebrow: "Bordo Campo News", title: "Tutto il calcio, live e aggiornato", icon: "⚽" };
 }
 
 function formatDate(value: string) {
-  if (!value) return "Aggiornato ora";
+  if (!value) return "ora";
 
   try {
     return new Intl.DateTimeFormat("it-IT", {
@@ -201,29 +205,8 @@ function formatDate(value: string) {
       minute: "2-digit",
     }).format(new Date(value));
   } catch {
-    return "Aggiornato ora";
+    return "ora";
   }
-}
-
-function newsCategory(title: string) {
-  const lower = title.toLowerCase();
-
-  if (lower.includes("colpo") || lower.includes("mercato") || lower.includes("trasfer")) return "COLPO DI MERCATO";
-  if (lower.includes("champions")) return "CHAMPIONS";
-  if (lower.includes("mondiale") || lower.includes("world cup")) return "MONDIALE";
-  if (lower.includes("serie a")) return "SERIE A";
-  if (lower.includes("ufficiale")) return "UFFICIALE";
-  if (lower.includes("infortun")) return "INFORTUNIO";
-
-  return "NEWS";
-}
-
-function categoryStyle(category: string) {
-  if (category === "COLPO DI MERCATO") return "bg-yellow-300 text-black";
-  if (category === "CHAMPIONS") return "bg-blue-400 text-black";
-  if (category === "MONDIALE") return "bg-sky-300 text-black";
-  if (category === "UFFICIALE") return "bg-red-500 text-white";
-  return "bg-lime-400 text-black";
 }
 
 export default async function CalcioPage() {
@@ -235,70 +218,58 @@ export default async function CalcioPage() {
 
   const theme = getTheme(news);
   const mainNews = news[0];
+  const secondaryNews = news.slice(1, 4);
+  const listNews = news.slice(4);
   const hasFootballApi = Boolean(process.env.FOOTBALL_DATA_API_KEY);
+  const heroImage = HERO_IMAGES[Math.floor(Date.now() / (1000 * 60 * 10)) % HERO_IMAGES.length];
 
-  const heroIndex = Math.floor(Date.now() / (1000 * 60 * 10)) % HERO_IMAGES.length;
-  const heroImage = HERO_IMAGES[heroIndex];
-
-  const tickerItems =
-    news.length > 0
-      ? news.slice(0, 8)
-      : [
-          { title: "NEWS CALCIO LIVE", link: "1" },
-          { title: "MERCATO", link: "2" },
-          { title: "RISULTATI", link: "3" },
-          { title: "CLASSIFICHE", link: "4" },
-        ];
+  const tickerItems = news.length > 0 ? news.slice(0, 10) : [
+    { title: "Calcio live", link: "1" },
+    { title: "Mercato", link: "2" },
+    { title: "Risultati", link: "3" },
+    { title: "Classifiche", link: "4" },
+  ];
 
   return (
-    <main className="min-h-screen bg-[#020403] text-white">
+    <main className="min-h-screen bg-[#050705] text-white">
       <style>{`
         @keyframes bcMarquee {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-
-        @keyframes bcFloat {
-          0%, 100% { transform: translateY(0px) scale(1); }
-          50% { transform: translateY(-12px) scale(1.02); }
+        @keyframes bcPulse {
+          0%, 100% { box-shadow: 0 0 26px rgba(239,68,68,.45); transform: scale(1); }
+          50% { box-shadow: 0 0 54px rgba(239,68,68,.75); transform: scale(1.035); }
         }
-
-        .bc-marquee {
-          animation: bcMarquee 35s linear infinite;
-        }
-
-        .bc-float {
-          animation: bcFloat 8s ease-in-out infinite;
-        }
+        .bc-marquee { animation: bcMarquee 45s linear infinite; }
+        .bc-live { animation: bcPulse 1.5s ease-in-out infinite; }
       `}</style>
 
-      <section className={`relative min-h-[760px] overflow-hidden border-b border-lime-400/20 bg-gradient-to-br ${theme.bg} px-6 py-16 md:py-24`}>
+      <section className="relative overflow-hidden px-6 pb-12 pt-20 md:pb-20 md:pt-28">
         <div
-          className="absolute inset-0 scale-105 bg-cover bg-center opacity-55"
+          className="absolute inset-0 scale-105 bg-cover bg-center opacity-50"
           style={{ backgroundImage: `url('${heroImage}')` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/65 to-black/25" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#020403] via-transparent to-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/35" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050705] via-black/20 to-black/50" />
+        <div className="absolute left-[-200px] top-[-220px] h-[520px] w-[520px] rounded-full bg-lime-400/20 blur-[160px]" />
+        <div className="absolute bottom-[-220px] right-[-180px] h-[520px] w-[520px] rounded-full bg-emerald-400/15 blur-[150px]" />
 
-        <div className="absolute left-[-160px] top-[-160px] h-[520px] w-[520px] rounded-full bg-lime-400/25 blur-[160px]" />
-        <div className="absolute bottom-[-200px] right-[-120px] h-[520px] w-[520px] rounded-full bg-emerald-500/20 blur-[160px]" />
-
-        <div className="relative z-10 mx-auto grid max-w-7xl gap-10 xl:grid-cols-[1fr_0.9fr] xl:items-center">
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-8 xl:grid-cols-[1fr_520px] xl:items-end">
           <div>
-            <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-lime-400/30 bg-black/55 px-5 py-3 backdrop-blur">
-              <span className="text-3xl">{theme.icon}</span>
-              <span className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
-                {theme.label}
+            <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-lime-400/25 bg-black/45 px-5 py-3 backdrop-blur">
+              <span className="text-2xl">{theme.icon}</span>
+              <span className="text-xs font-black uppercase tracking-[0.3em] text-lime-300">
+                {theme.eyebrow}
               </span>
             </div>
 
-            <h1 className="max-w-5xl text-5xl font-black leading-none drop-shadow-2xl md:text-7xl">
+            <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
               {theme.title}
             </h1>
 
-            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-200">
-              News calcistiche prese online, immagini dinamiche dal mondo del calcio,
-              risultati, classifiche e aggiornamenti in tempo quasi reale.
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-300">
+              News online, risultati e classifiche in un hub pulito, moderno e aggiornato automaticamente.
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -306,16 +277,16 @@ export default async function CalcioPage() {
                 href={DISCORD_LIVE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="animate-pulse rounded-2xl bg-red-500 px-8 py-4 text-center text-lg font-black text-white shadow-[0_0_45px_rgba(239,68,68,0.75)] transition hover:scale-105 hover:bg-red-400"
+                className="bc-live rounded-2xl bg-red-500 px-8 py-4 text-center text-lg font-black text-white transition hover:bg-red-400"
               >
                 🔴 LIVE ENTRA
               </a>
 
               <a
                 href="#news"
-                className="rounded-2xl border border-lime-400/50 bg-black/45 px-8 py-4 text-center font-black text-lime-300 backdrop-blur transition hover:bg-lime-400 hover:text-black"
+                className="rounded-2xl border border-lime-400/40 bg-lime-400/10 px-8 py-4 text-center font-black text-lime-200 backdrop-blur transition hover:bg-lime-400 hover:text-black"
               >
-                VEDI LE NEWS
+                LEGGI LE NEWS
               </a>
             </div>
           </div>
@@ -325,31 +296,29 @@ export default async function CalcioPage() {
               href={mainNews.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="group bc-float relative overflow-hidden rounded-[2.5rem] border border-lime-400/30 bg-black/65 p-6 backdrop-blur-xl transition hover:border-lime-400 hover:shadow-[0_0_80px_rgba(132,204,22,0.28)]"
+              className="group relative overflow-hidden rounded-[2.5rem] border border-lime-400/25 bg-black/70 p-7 backdrop-blur-xl transition hover:-translate-y-1 hover:border-lime-400/70 hover:shadow-[0_0_70px_rgba(132,204,22,0.20)]"
             >
-              <div className="absolute right-[-100px] top-[-100px] h-[280px] w-[280px] rounded-full bg-lime-400/25 blur-[100px]" />
-
+              <div className="absolute right-[-90px] top-[-90px] h-[260px] w-[260px] rounded-full bg-lime-400/20 blur-[90px]" />
               <div className="relative z-10">
-                <div className="mb-5 flex items-center justify-between gap-4">
-                  <span className={`rounded-full px-4 py-2 text-xs font-black ${categoryStyle(newsCategory(mainNews.title))}`}>
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <span className="rounded-full bg-lime-400 px-4 py-2 text-xs font-black text-black">
                     {newsCategory(mainNews.title)}
                   </span>
-
                   <span className="text-xs font-bold text-zinc-400">
                     {mainNews.source} • {formatDate(mainNews.pubDate)}
                   </span>
                 </div>
 
-                <h2 className="text-3xl font-black leading-tight md:text-5xl">
+                <h2 className="text-3xl font-black leading-tight">
                   {mainNews.title}
                 </h2>
 
-                <p className="mt-5 line-clamp-5 text-lg leading-relaxed text-zinc-300">
+                <p className="mt-4 line-clamp-4 leading-relaxed text-zinc-300">
                   {mainNews.description}
                 </p>
 
-                <div className="mt-8 inline-flex rounded-2xl bg-lime-400 px-6 py-4 font-black text-black transition group-hover:scale-105">
-                  LEGGI ARTICOLO COMPLETO
+                <div className="mt-6 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition group-hover:bg-lime-400">
+                  APRI ARTICOLO
                 </div>
               </div>
             </a>
@@ -357,182 +326,179 @@ export default async function CalcioPage() {
         </div>
       </section>
 
-      <section className="overflow-hidden border-y border-lime-400/25 bg-black py-4">
-        <div className="bc-marquee flex w-max gap-16 whitespace-nowrap px-6 text-sm font-black uppercase tracking-[0.25em] text-lime-300">
+      <section className="overflow-hidden border-y border-lime-400/20 bg-lime-400/10 py-4">
+        <div className="bc-marquee flex w-max gap-14 whitespace-nowrap px-6 text-sm font-black uppercase tracking-[0.22em] text-lime-200">
           {[...tickerItems, ...tickerItems, ...tickerItems].map((item: any, index) => (
             <span key={`${item.link}-${index}`}>
-              {newsCategory(item.title)}: {shortTitle(item.title)}
+              {newsCategory(item.title)} · {shortTitle(item.title)}
             </span>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-6 py-12 xl:grid-cols-[1.35fr_0.9fr]">
-        <div id="news" className="rounded-[2.5rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-          <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
-                News a tendina
-              </p>
-              <h2 className="mt-3 text-4xl font-black">Ultime notizie</h2>
-            </div>
-
-            <span className="rounded-full border border-white/10 bg-black/40 px-4 py-2 text-sm text-zinc-400">
-              Aggiornamento ogni 5 min
-            </span>
+      <section id="news" className="mx-auto max-w-7xl px-6 py-12">
+        <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
+              Ultime dal web
+            </p>
+            <h2 className="mt-3 text-4xl font-black md:text-5xl">Le notizie principali</h2>
           </div>
+          <p className="text-sm text-zinc-500">Aggiornamento automatico ogni 5 minuti</p>
+        </div>
 
-          <div className="grid gap-4">
-            {news.length === 0 && (
-              <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-6 text-orange-100">
-                Non riesco a caricare le news in questo momento.
+        <div className="grid gap-5 lg:grid-cols-3">
+          {secondaryNews.map((item) => (
+            <a
+              key={item.link}
+              href={item.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 transition hover:-translate-y-1 hover:border-lime-400/50 hover:bg-white/[0.07]"
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <span className="rounded-full bg-lime-400/15 px-3 py-1 text-xs font-black text-lime-300">
+                  {newsCategory(item.title)}
+                </span>
+                <span className="text-xs text-zinc-500">{formatDate(item.pubDate)}</span>
               </div>
-            )}
 
-            {news.slice(1).map((item, index) => {
-              const category = newsCategory(item.title);
+              <h3 className="text-2xl font-black leading-tight">{item.title}</h3>
+              <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-zinc-400">
+                {item.description}
+              </p>
+              <span className="mt-5 inline-flex text-sm font-black text-lime-300 group-hover:text-lime-200">
+                Leggi articolo →
+              </span>
+            </a>
+          ))}
+        </div>
 
-              return (
+        <div className="mt-8 grid gap-8 xl:grid-cols-[1fr_390px]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5">
+            <div className="grid gap-3">
+              {listNews.length === 0 && (
+                <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-6 text-orange-100">
+                  Nessuna news caricata al momento.
+                </div>
+              )}
+
+              {listNews.map((item) => (
                 <details
-                  key={`${item.link}-${index}`}
-                  className="group overflow-hidden rounded-[2rem] border border-white/10 bg-black/45 transition hover:border-lime-400/40"
+                  key={item.link}
+                  className="group rounded-2xl border border-white/10 bg-black/45 transition hover:border-lime-400/40"
                 >
                   <summary className="cursor-pointer list-none p-5">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div className="min-w-0">
-                        <div className="mb-3 flex flex-wrap items-center gap-3">
-                          <span className={`rounded-full px-3 py-1 text-xs font-black ${categoryStyle(category)}`}>
-                            {category}
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-lime-400 px-3 py-1 text-[11px] font-black text-black">
+                            {newsCategory(item.title)}
                           </span>
-                          <span className="text-xs font-bold text-zinc-500">
+                          <span className="text-xs text-zinc-500">
                             {item.source} • {formatDate(item.pubDate)}
                           </span>
                         </div>
-
-                        <h3 className="text-2xl font-black leading-tight">
-                          {item.title}
-                        </h3>
-
-                        <p className="mt-3 line-clamp-2 text-zinc-400">
+                        <h3 className="text-xl font-black leading-snug">{item.title}</h3>
+                        <p className="mt-2 line-clamp-2 text-sm text-zinc-400">
                           {item.description}
                         </p>
                       </div>
 
-                      <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-lime-300 transition group-open:bg-lime-400 group-open:text-black">
+                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black text-lime-300 group-open:bg-lime-400 group-open:text-black">
                         APRI
                       </span>
                     </div>
                   </summary>
 
-                  <div className="border-t border-white/10 bg-black/35 p-5">
-                    <p className="max-w-4xl text-lg leading-relaxed text-zinc-200">
-                      {item.description}
-                    </p>
-
+                  <div className="border-t border-white/10 p-5">
+                    <p className="leading-relaxed text-zinc-300">{item.description}</p>
                     <a
                       href={item.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-6 inline-flex rounded-2xl bg-lime-400 px-5 py-3 text-sm font-black text-black transition hover:scale-105"
+                      className="mt-5 inline-flex rounded-xl bg-lime-400 px-5 py-3 text-sm font-black text-black"
                     >
                       LEGGI ARTICOLO COMPLETO
                     </a>
                   </div>
                 </details>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <aside className="space-y-8">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
-              Classifica
-            </p>
-            <h2 className="mt-3 text-3xl font-black">Serie A</h2>
+          <aside className="space-y-5">
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.045] p-6">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-lime-400">
+                Classifica
+              </p>
+              <h2 className="mt-2 text-3xl font-black">Serie A</h2>
 
-            {!hasFootballApi && (
-              <div className="my-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4 text-sm text-orange-100">
-                Per classifiche reali aggiungi su Vercel:
-                <br />
-                <b>FOOTBALL_DATA_API_KEY</b>
+              {!hasFootballApi && (
+                <div className="my-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4 text-sm text-orange-100">
+                  Aggiungi su Vercel: <b>FOOTBALL_DATA_API_KEY</b>
+                </div>
+              )}
+
+              <div className="mt-5 space-y-2">
+                {standings.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-5 text-zinc-400">
+                    Classifica non disponibile.
+                  </div>
+                ) : (
+                  standings.map((row) => (
+                    <div
+                      key={`${row.position}-${row.team}`}
+                      className="grid grid-cols-[32px_1fr_45px] items-center gap-3 rounded-xl bg-black/45 px-3 py-3"
+                    >
+                      <span className="font-black text-lime-400">{row.position}</span>
+                      <span className="truncate font-bold">{row.team}</span>
+                      <span className="text-right font-black">{row.points}</span>
+                    </div>
+                  ))
+                )}
               </div>
-            )}
-
-            <div className="mt-5 space-y-2">
-              {standings.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-black/40 p-5 text-zinc-400">
-                  Classifica non disponibile.
-                </div>
-              ) : (
-                standings.map((row) => (
-                  <div
-                    key={`${row.position}-${row.team}`}
-                    className="grid grid-cols-[36px_1fr_48px] items-center gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-3"
-                  >
-                    <span className="font-black text-lime-400">{row.position}</span>
-                    <span className="truncate font-bold">{row.team}</span>
-                    <span className="text-right font-black">{row.points}</span>
-                  </div>
-                ))
-              )}
             </div>
-          </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-lime-400">
-              Risultati live
-            </p>
-            <h2 className="mt-3 text-3xl font-black">Partite</h2>
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.045] p-6">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-lime-400">
+                Risultati
+              </p>
+              <h2 className="mt-2 text-3xl font-black">Partite live</h2>
 
-            <div className="mt-6 space-y-3">
-              {matches.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-black/40 p-5 text-zinc-400">
-                  Risultati non disponibili.
-                </div>
-              ) : (
-                matches.map((match, index) => (
-                  <div
-                    key={`${match.homeTeam}-${match.awayTeam}-${index}`}
-                    className="rounded-2xl border border-white/10 bg-black/40 p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between text-xs text-zinc-500">
-                      <span>{match.competition}</span>
-                      <span>{match.status}</span>
-                    </div>
-
-                    <div className="grid grid-cols-[1fr_70px_1fr] items-center gap-3 text-sm font-black">
-                      <span className="truncate">{match.homeTeam}</span>
-                      <span className="rounded-xl bg-lime-400 px-3 py-2 text-center text-black">
-                        {match.score}
-                      </span>
-                      <span className="truncate text-right">{match.awayTeam}</span>
-                    </div>
+              <div className="mt-5 space-y-3">
+                {matches.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-5 text-zinc-400">
+                    Risultati non disponibili.
                   </div>
-                ))
-              )}
+                ) : (
+                  matches.map((match, index) => (
+                    <div key={`${match.homeTeam}-${match.awayTeam}-${index}`} className="rounded-xl bg-black/45 p-4">
+                      <div className="mb-2 flex justify-between text-xs text-zinc-500">
+                        <span>{match.competition}</span>
+                        <span>{match.status}</span>
+                      </div>
+                      <div className="grid grid-cols-[1fr_64px_1fr] items-center gap-2 text-sm font-black">
+                        <span className="truncate">{match.homeTeam}</span>
+                        <span className="rounded-lg bg-lime-400 px-2 py-2 text-center text-black">{match.score}</span>
+                        <span className="truncate text-right">{match.awayTeam}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-red-400/30 bg-red-500/10 p-6 backdrop-blur-xl">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-red-300">
-              Diretta community
-            </p>
-            <h2 className="mt-3 text-3xl font-black">Guarda il live con noi</h2>
-            <p className="mt-4 text-zinc-300">
-              Entra nel server Discord Bordo Campo per commentare partite, mercato e tornei.
-            </p>
 
             <a
               href={DISCORD_LIVE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex w-full animate-pulse items-center justify-center rounded-2xl bg-red-500 px-6 py-4 text-center text-lg font-black text-white shadow-[0_0_35px_rgba(239,68,68,0.55)] transition hover:scale-105"
+              className="bc-live flex rounded-[2rem] bg-red-500 p-6 text-center text-xl font-black text-white"
             >
-              🔴 LIVE ENTRA
+              <span className="mx-auto">🔴 LIVE ENTRA NEL DISCORD</span>
             </a>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </section>
     </main>
   );
