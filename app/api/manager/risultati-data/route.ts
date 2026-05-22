@@ -8,29 +8,26 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type AnyMatch = Record<string, any>;
-
-const ACTIVE_STATUSES = ["pending", "active", "scheduled"];
+type AnyRow = Record<string, any>;
 
 function clean(value: any) {
   return String(value || "").trim();
 }
 
-function isActiveMatch(match: AnyMatch) {
-  const status = clean(match.status || "pending").toLowerCase();
+function isHiddenStatus(statusValue: any) {
+  const status = clean(statusValue || "pending").toLowerCase();
 
-  // Queste NON devono più uscire nella pagina risultati.
-  if (
-    status === "confirmed" ||
-    status === "played" ||
-    status === "awaiting_confirmation" ||
-    status === "contested" ||
-    status === "cancelled"
-  ) {
-    return false;
-  }
-
-  return ACTIVE_STATUSES.includes(status) || status === "";
+  // Queste sono partite da NON mostrare nella pagina inserimento risultati.
+  return [
+    "confirmed",
+    "played",
+    "awaiting_confirmation",
+    "contested",
+    "cancelled",
+    "annullata",
+    "confermata",
+    "giocata",
+  ].includes(status);
 }
 
 function playerSelect() {
@@ -50,7 +47,6 @@ function playerSelect() {
 
 async function getPlayersByOwner(ownerDiscordId: string) {
   const owner = clean(ownerDiscordId);
-
   if (!owner) return [];
 
   const { data, error } = await supabase
@@ -67,97 +63,77 @@ async function getPlayersByOwner(ownerDiscordId: string) {
   return data || [];
 }
 
-async function getChampionshipMatches(userId: string) {
-  const { data, error } = await supabase
-    .from("championship_matches")
-    .select(`
-      *,
-      championships(name)
-    `)
-    .or(`home_id.eq.${userId},away_id.eq.${userId}`)
-    .order("round_number", { ascending: true });
+function normalizeMatch(row: AnyRow, sourceTable: string, competitionName: string, competitionType: string) {
+  const homeId =
+    row.home_id ??
+    row.home_user_id ??
+    row.home_discord_id ??
+    row.home_manager_id ??
+    "";
 
-  if (error) {
-    console.error("[RISULTATI DATA] championship error", error);
-    return [];
-  }
+  const awayId =
+    row.away_id ??
+    row.away_user_id ??
+    row.away_discord_id ??
+    row.away_manager_id ??
+    "";
 
-  return (data || [])
-    .filter(isActiveMatch)
-    .map((match: AnyMatch) => ({
-      id: match.id,
-      source_table: "championship_matches",
-      competition_name: match.championships?.name || "Campionato",
-      competition_type: "Campionati",
-      round: `Giornata ${match.round_number || "-"}`,
-      leg: match.leg || match.phase || null,
-      home_user_id: clean(match.home_id),
-      away_user_id: clean(match.away_id),
-      home_club: match.home_name || "Casa",
-      away_club: match.away_name || "Trasferta",
-    }));
+  const homeClub =
+    row.home_name ??
+    row.home_club ??
+    row.home_team ??
+    "Casa";
+
+  const awayClub =
+    row.away_name ??
+    row.away_club ??
+    row.away_team ??
+    "Trasferta";
+
+  return {
+    id: row.id,
+    source_table: sourceTable,
+    competition_name: competitionName,
+    competition_type: competitionType,
+    round: row.round || row.round_name || (row.round_number ? `Giornata ${row.round_number}` : "Turno"),
+    leg: row.leg || row.phase || null,
+    home_user_id: clean(homeId),
+    away_user_id: clean(awayId),
+    home_club: homeClub,
+    away_club: awayClub,
+  };
 }
 
-async function getNationalCupMatches(userId: string) {
-  const { data, error } = await supabase
-    .from("national_cup_matches")
-    .select(`
-      *,
-      national_cups(name)
-    `)
-    .or(`home_id.eq.${userId},away_id.eq.${userId}`)
-    .order("round_number", { ascending: true });
+async function readTable(table: string, userId: string, competitionType: string) {
+  const variants = [
+    `home_id.eq.${userId},away_id.eq.${userId}`,
+    `home_user_id.eq.${userId},away_user_id.eq.${userId}`,
+    `home_discord_id.eq.${userId},away_discord_id.eq.${userId}`,
+    `home_manager_id.eq.${userId},away_manager_id.eq.${userId}`,
+  ];
 
-  if (error) {
-    console.error("[RISULTATI DATA] national cup error", error);
-    return [];
+  for (const orFilter of variants) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .or(orFilter)
+      .order("id", { ascending: true });
+
+    if (!error && data) {
+      return data
+        .filter((row: AnyRow) => !isHiddenStatus(row.status))
+        .map((row: AnyRow) =>
+          normalizeMatch(
+            row,
+            table,
+            row.competition_name || row.name || competitionType,
+            competitionType
+          )
+        );
+    }
   }
 
-  return (data || [])
-    .filter(isActiveMatch)
-    .map((match: AnyMatch) => ({
-      id: match.id,
-      source_table: "national_cup_matches",
-      competition_name: match.national_cups?.name || "Coppa Nazionale",
-      competition_type: "Coppa Nazionale",
-      round: `Turno ${match.round_number || "-"}`,
-      leg: match.leg || match.phase || null,
-      home_user_id: clean(match.home_id),
-      away_user_id: clean(match.away_id),
-      home_club: match.home_name || "Casa",
-      away_club: match.away_name || "Trasferta",
-    }));
-}
-
-async function getEuropeanCupMatches(userId: string) {
-  const { data, error } = await supabase
-    .from("european_cup_matches")
-    .select(`
-      *,
-      european_cups(name)
-    `)
-    .or(`home_id.eq.${userId},away_id.eq.${userId}`)
-    .order("round_number", { ascending: true });
-
-  if (error) {
-    // Se la tabella non esiste nel tuo DB, ignora.
-    return [];
-  }
-
-  return (data || [])
-    .filter(isActiveMatch)
-    .map((match: AnyMatch) => ({
-      id: match.id,
-      source_table: "european_cup_matches",
-      competition_name: match.european_cups?.name || "Coppa Europea",
-      competition_type: "Coppa Europea",
-      round: `Turno ${match.round_number || "-"}`,
-      leg: match.leg || match.phase || null,
-      home_user_id: clean(match.home_id),
-      away_user_id: clean(match.away_id),
-      home_club: match.home_name || "Casa",
-      away_club: match.away_name || "Trasferta",
-    }));
+  return [];
 }
 
 export async function GET(request: NextRequest) {
@@ -169,10 +145,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "UserId mancante." }, { status: 400 });
     }
 
+    // Versione più compatibile: legge le partite dalle tabelle usando più possibili nomi colonna.
+    // Così non spariscono se il tuo database usa home_id/away_id oppure home_user_id/away_user_id.
     const rawMatches = [
-      ...(await getChampionshipMatches(userId)),
-      ...(await getNationalCupMatches(userId)),
-      ...(await getEuropeanCupMatches(userId)),
+      ...(await readTable("championship_matches", userId, "Campionati")),
+      ...(await readTable("national_cup_matches", userId, "Coppa Nazionale")),
+      ...(await readTable("european_cup_matches", userId, "Coppa Europea")),
+      ...(await readTable("cup_matches", userId, "Coppa")),
     ];
 
     const ownerIds = Array.from(
@@ -194,11 +173,6 @@ export async function GET(request: NextRequest) {
 
     const matches = rawMatches.map((match) => ({
       ...match,
-
-      // IMPORTANTISSIMO:
-      // I giocatori vengono presi da owner_discord_id.
-      // Quindi se un player è stato comprato apparirà nella nuova squadra.
-      // Se è stato ceduto sparirà dalla vecchia squadra.
       home_players: playersByOwner[match.home_user_id] || [],
       away_players: playersByOwner[match.away_user_id] || [],
     }));
