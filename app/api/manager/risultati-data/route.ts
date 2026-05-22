@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type AnyRow = Record<string, any>;
+type Row = Record<string, any>;
 
 function clean(value: any) {
   return String(value || "").trim();
@@ -19,10 +19,7 @@ function norm(value: any) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/fk/g, "")
-    .replace(/fc/g, "")
-    .replace(/cf/g, "")
-    .replace(/sk/g, "")
+    .replace(/\b(fc|fk|cf|sk|sc|ac|club)\b/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -43,19 +40,19 @@ function hiddenStatus(statusValue: any) {
   ].includes(status);
 }
 
-function playerSelect() {
-  return `
-    id,
-    name,
-    position,
-    overall,
-    team,
-    image_url,
-    card_url,
-    photo_url,
-    avatar_url,
-    owner_discord_id
-  `;
+function normalizePlayer(player: Row) {
+  return {
+    id: player.id,
+    name: player.name,
+    position: player.position || null,
+    overall: player.overall || null,
+    team: player.team || null,
+    image_url: player.image_url || player.card_url || player.photo_url || player.avatar_url || null,
+    card_url: player.card_url || player.image_url || null,
+    photo_url: player.photo_url || null,
+    avatar_url: player.avatar_url || null,
+    owner_discord_id: player.owner_discord_id || null,
+  };
 }
 
 function sameTeam(playerTeam: any, clubName: any) {
@@ -71,9 +68,11 @@ async function getPlayersByOwner(ownerDiscordId: string) {
   const owner = clean(ownerDiscordId);
   if (!owner) return [];
 
+  // Uso select("*") perché alcuni DB non hanno card_url/photo_url/avatar_url.
+  // Se una colonna non esiste e la selezioni, Supabase ritorna errore e non mostra i giocatori.
   const { data, error } = await supabase
     .from("players")
-    .select(playerSelect())
+    .select("*")
     .eq("owner_discord_id", owner)
     .order("overall", { ascending: false });
 
@@ -82,48 +81,84 @@ async function getPlayersByOwner(ownerDiscordId: string) {
     return [];
   }
 
-  return data || [];
+  return (data || []).map(normalizePlayer);
 }
 
-async function getPlayersByClubFromTable(table: "players" | "players_fc26", clubName: string) {
+async function getPlayersByClub(table: "players" | "players_fc26", clubName: string) {
   const club = clean(clubName);
   if (!club) return [];
 
-  // Non uso ILIKE perché nomi tipo Qarabağ / Qarabag, München / Munchen, ecc. non combaciano.
-  // Prendo i giocatori e filtro normalizzando in JS.
-  const { data, error } = await supabase
-    .from(table)
-    .select(playerSelect())
-    .order("overall", { ascending: false })
-    .limit(5000);
+  const candidates = Array.from(
+    new Set([
+      club,
+      club.replace(/ğ/g, "g").replace(/Ğ/g, "G"),
+      club.replace(/\bFK\b/gi, "").trim(),
+      club.replace(/\bFC\b/gi, "").trim(),
+      norm(club),
+    ].filter(Boolean))
+  );
 
-  if (error) {
-    console.error(`[RISULTATI DATA] ${table} fallback error`, error);
-    return [];
+  // Prima provo query leggere con ilike.
+  for (const candidate of candidates) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .ilike("team", `%${candidate}%`)
+      .order("overall", { ascending: false })
+      .limit(60);
+
+    if (!error && data && data.length > 0) {
+      return data.map(normalizePlayer);
+    }
   }
 
-  return (data || [])
-    .filter((player: AnyRow) => sameTeam(player.team, club))
-    .slice(0, 40);
+  // Fallback definitivo: leggo a blocchi e confronto normalizzato in JS.
+  // Serve per nomi con accenti o squadre scritte diversamente.
+  let all: Row[] = [];
+  const pageSize = 1000;
+
+  for (let from = 0; from < 20000; from += pageSize) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error(`[RISULTATI DATA] ${table} scan error`, error);
+      break;
+    }
+
+    if (!data || data.length === 0) break;
+
+    all = all.concat(data);
+
+    if (data.length < pageSize) break;
+  }
+
+  return all
+    .filter((player) => sameTeam(player.team, club))
+    .sort((a, b) => Number(b.overall || 0) - Number(a.overall || 0))
+    .slice(0, 60)
+    .map(normalizePlayer);
 }
 
 async function getRoster(ownerDiscordId: string, clubName: string) {
-  // 1. Priorità assoluta: rosa aggiornata da mercato/scambi/aste.
+  // Fonte corretta per mercato/scambi/aste:
+  // se owner_discord_id è aggiornato, questa rosa contiene comprati e non contiene venduti.
   const byOwner = await getPlayersByOwner(ownerDiscordId);
   if (byOwner.length > 0) return byOwner;
 
-  // 2. Fallback: nome club nella tabella players.
-  const byClubPlayers = await getPlayersByClubFromTable("players", clubName);
-  if (byClubPlayers.length > 0) return byClubPlayers;
+  // Fallback solo se il DB non ha ancora owner_discord_id popolato.
+  const byPlayersClub = await getPlayersByClub("players", clubName);
+  if (byPlayersClub.length > 0) return byPlayersClub;
 
-  // 3. Fallback finale: dataset players_fc26 se esiste.
-  const byClubFc26 = await getPlayersByClubFromTable("players_fc26", clubName);
-  if (byClubFc26.length > 0) return byClubFc26;
+  const byFc26Club = await getPlayersByClub("players_fc26", clubName);
+  if (byFc26Club.length > 0) return byFc26Club;
 
   return [];
 }
 
-function normalizeMatch(row: AnyRow, sourceTable: string, competitionName: string, competitionType: string) {
+function normalizeMatch(row: Row, sourceTable: string, competitionType: string) {
   const homeId =
     row.home_id ??
     row.home_user_id ??
@@ -153,7 +188,7 @@ function normalizeMatch(row: AnyRow, sourceTable: string, competitionName: strin
   return {
     id: row.id,
     source_table: sourceTable,
-    competition_name: competitionName,
+    competition_name: row.competition_name || row.name || competitionType,
     competition_type: competitionType,
     round: row.round || row.round_name || (row.round_number ? `Giornata ${row.round_number}` : "Turno"),
     leg: row.leg || row.phase || null,
@@ -181,15 +216,8 @@ async function readTable(table: string, userId: string, competitionType: string)
 
     if (!error && data) {
       return data
-        .filter((row: AnyRow) => !hiddenStatus(row.status))
-        .map((row: AnyRow) =>
-          normalizeMatch(
-            row,
-            table,
-            row.competition_name || row.name || competitionType,
-            competitionType
-          )
-        );
+        .filter((row: Row) => !hiddenStatus(row.status))
+        .map((row: Row) => normalizeMatch(row, table, competitionType));
     }
   }
 
