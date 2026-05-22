@@ -49,8 +49,8 @@ function decodeHtml(value: string) {
 
 function stripHtml(value: string) {
   return decodeHtml(value)
-    .replace(/<a\b[^>]*>(.*?)<\/a>/gis, "$1")
-    .replace(/<font\b[^>]*>(.*?)<\/font>/gis, "$1")
+    .replace(/<a\b[^>]*>([\\s\\S]*?)<\/a>/gi, "$1")
+    .replace(/<font\b[^>]*>([\\s\\S]*?)<\/font>/gi, "$1")
     .replace(/<img\b[^>]*>/gis, "")
     .replace(/<[^>]*>/g, " ")
     .replace(/https?:\/\/\S+/g, "")
@@ -77,7 +77,7 @@ function shortTitle(title: string) {
 function extractDescription(item: string) {
   const raw = decodeHtml(extractRawTag(item, "description"));
 
-  const anchorTexts = Array.from(raw.matchAll(/<a\b[^>]*>(.*?)<\/a>/gis))
+  const anchorTexts = Array.from(raw.matchAll(/<a\b[^>]*>([\\s\\S]*?)<\/a>/gi))
     .map((m) => stripHtml(m[1]))
     .filter(Boolean);
 
