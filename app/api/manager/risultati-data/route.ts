@@ -14,10 +14,9 @@ function clean(value: any) {
   return String(value || "").trim();
 }
 
-function isHiddenStatus(statusValue: any) {
+function hiddenStatus(statusValue: any) {
   const status = clean(statusValue || "pending").toLowerCase();
 
-  // Queste sono partite da NON mostrare nella pagina inserimento risultati.
   return [
     "confirmed",
     "played",
@@ -56,11 +55,54 @@ async function getPlayersByOwner(ownerDiscordId: string) {
     .order("overall", { ascending: false });
 
   if (error) {
-    console.error("[RISULTATI DATA] players owner error", owner, error);
+    console.error("[RISULTATI DATA] players by owner error", owner, error);
     return [];
   }
 
   return data || [];
+}
+
+async function getPlayersByClubFallback(clubName: string) {
+  const club = clean(clubName);
+  if (!club) return [];
+
+  // Fallback: se owner_discord_id non è aggiornato o è vuoto, almeno mostra la rosa base del club.
+  // Questo evita la pagina vuota.
+  const { data, error } = await supabase
+    .from("players")
+    .select(playerSelect())
+    .ilike("team", club)
+    .order("overall", { ascending: false })
+    .limit(40);
+
+  if (!error && data && data.length > 0) return data;
+
+  const like = `%${club}%`;
+
+  const retry = await supabase
+    .from("players")
+    .select(playerSelect())
+    .ilike("team", like)
+    .order("overall", { ascending: false })
+    .limit(40);
+
+  if (retry.error) {
+    console.error("[RISULTATI DATA] players by club fallback error", club, retry.error);
+    return [];
+  }
+
+  return retry.data || [];
+}
+
+async function getRoster(ownerDiscordId: string, clubName: string) {
+  const byOwner = await getPlayersByOwner(ownerDiscordId);
+
+  // Se il mercato/aste/scambi aggiornano correttamente owner_discord_id, usa SEMPRE questa.
+  // Così i comprati appaiono e i ceduti spariscono.
+  if (byOwner.length > 0) return byOwner;
+
+  // Se invece owner_discord_id non è ancora aggiornato nel DB, fallback sul nome club.
+  return await getPlayersByClubFallback(clubName);
 }
 
 function normalizeMatch(row: AnyRow, sourceTable: string, competitionName: string, competitionType: string) {
@@ -121,7 +163,7 @@ async function readTable(table: string, userId: string, competitionType: string)
 
     if (!error && data) {
       return data
-        .filter((row: AnyRow) => !isHiddenStatus(row.status))
+        .filter((row: AnyRow) => !hiddenStatus(row.status))
         .map((row: AnyRow) =>
           normalizeMatch(
             row,
@@ -145,8 +187,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "UserId mancante." }, { status: 400 });
     }
 
-    // Versione più compatibile: legge le partite dalle tabelle usando più possibili nomi colonna.
-    // Così non spariscono se il tuo database usa home_id/away_id oppure home_user_id/away_user_id.
     const rawMatches = [
       ...(await readTable("championship_matches", userId, "Campionati")),
       ...(await readTable("national_cup_matches", userId, "Coppa Nazionale")),
@@ -154,28 +194,13 @@ export async function GET(request: NextRequest) {
       ...(await readTable("cup_matches", userId, "Coppa")),
     ];
 
-    const ownerIds = Array.from(
-      new Set(
-        rawMatches
-          .flatMap((match) => [match.home_user_id, match.away_user_id])
-          .map(clean)
-          .filter(Boolean)
-      )
+    const matches = await Promise.all(
+      rawMatches.map(async (match) => ({
+        ...match,
+        home_players: await getRoster(match.home_user_id, match.home_club),
+        away_players: await getRoster(match.away_user_id, match.away_club),
+      }))
     );
-
-    const playersByOwner: Record<string, any[]> = {};
-
-    await Promise.all(
-      ownerIds.map(async (ownerId) => {
-        playersByOwner[ownerId] = await getPlayersByOwner(ownerId);
-      })
-    );
-
-    const matches = rawMatches.map((match) => ({
-      ...match,
-      home_players: playersByOwner[match.home_user_id] || [],
-      away_players: playersByOwner[match.away_user_id] || [],
-    }));
 
     return NextResponse.json({ matches });
   } catch (error: any) {
