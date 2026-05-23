@@ -36,6 +36,110 @@ function statusClass(status?: string | null) {
   return "border-white/10 bg-white/[0.06] text-zinc-300";
 }
 
+
+function normId(value: any) {
+  return String(value || "").trim();
+}
+
+function displayManagerName(item: any) {
+  return (
+    item.discord_name ||
+    item.name ||
+    item.manager_name ||
+    item.real_name ||
+    item.ea_id ||
+    item.game_id ||
+    "Player"
+  );
+}
+
+function getClubForRegistration(item: any, clubs: any[] = []) {
+  const direct = item.club_name || item.team_name;
+  if (direct) return direct;
+
+  const discordId = normId(item.discord_id);
+  const club = clubs.find((c) => normId(c.assigned_to) === discordId);
+  return club?.name || "";
+}
+
+function getRosterForRegistration(item: any, players: any[] = []) {
+  const discordId = normId(item.discord_id);
+  return players
+    .filter((p) => normId(p.owner_discord_id) === discordId)
+    .sort((a, b) => n(b.overall) - n(a.overall));
+}
+
+function mergeRecentRegistrations(
+  richieste: any[] = [],
+  managers: any[] = [],
+  clubs: any[] = []
+) {
+  const map = new Map<string, any>();
+
+  for (const r of richieste || []) {
+    const id = normId(r.discord_id);
+    if (!id) continue;
+    map.set(id, {
+      ...r,
+      source: "request",
+      status: r.status || "pending",
+      sortDate: r.handled_at || r.created_at || "",
+    });
+  }
+
+  for (const m of managers || []) {
+    const id = normId(m.discord_id);
+    if (!id) continue;
+
+    const assignedClub = clubs.find((c) => normId(c.assigned_to) === id);
+    const previous = map.get(id) || {};
+
+    map.set(id, {
+      ...previous,
+      ...m,
+      discord_id: id,
+      discord_name:
+        previous.discord_name ||
+        m.discord_tag ||
+        m.username ||
+        m.name ||
+        m.manager_name ||
+        id,
+      club_name:
+        m.club_name ||
+        previous.club_name ||
+        assignedClub?.name ||
+        "",
+      status:
+        previous.status === "rejected"
+          ? previous.status
+          : "accepted",
+      source: "manager",
+      sortDate: previous.sortDate || m.created_at || assignedClub?.assigned_at || "",
+    });
+  }
+
+  for (const c of clubs || []) {
+    const id = normId(c.assigned_to);
+    if (!id) continue;
+
+    const previous = map.get(id) || {};
+    map.set(id, {
+      ...previous,
+      discord_id: id,
+      discord_name: previous.discord_name || previous.name || previous.manager_name || id,
+      club_name: previous.club_name || c.name,
+      status: previous.status || "accepted",
+      source: previous.source || "club",
+      sortDate: previous.sortDate || c.assigned_at || "",
+    });
+  }
+
+  return Array.from(map.values())
+    .sort((a, b) => String(b.sortDate || "").localeCompare(String(a.sortDate || "")))
+    .slice(0, 8);
+}
+
 export default async function TorneoPage() {
   const { data: richieste } = await supabase
     .from("signup_requests")
@@ -52,7 +156,7 @@ export default async function TorneoPage() {
 
   const { data: players } = await supabase
     .from("players")
-    .select("id, overall, owner_discord_id, sold_price");
+    .select("id, name, team, position, overall, owner_discord_id, sold_price");
 
   const { data: auctions } = await supabase
     .from("auctions")
@@ -86,7 +190,7 @@ export default async function TorneoPage() {
   const acceptedPct = pct(accepted, Math.max(totalRequests, 1));
   const clubsPct = pct(assignedClubs, Math.max(totalClubs, 1));
 
-  const recentRequests = (richieste || []).slice(0, 5);
+  const recentRequests = mergeRecentRegistrations(richieste || [], managers || [], clubs || []);
   const recentAuctions = auctions || [];
   const recentTransfers = transfers || [];
 
@@ -417,7 +521,12 @@ export default async function TorneoPage() {
                           <Badge className={statusClass(r.status)}>
                             {statusLabel(r.status)}
                           </Badge>
-                          {r.club_name && <Badge>{r.club_name}</Badge>}
+                          {getClubForRegistration(r, clubs || []) && (
+                            <ClubRosterBadge
+                              clubName={getClubForRegistration(r, clubs || [])}
+                              roster={getRosterForRegistration(r, players || [])}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -634,6 +743,64 @@ function ProgressRow({
     </div>
   );
 }
+
+
+function ClubRosterBadge({
+  clubName,
+  roster,
+}: {
+  clubName: string;
+  roster: any[];
+}) {
+  return (
+    <details className="relative">
+      <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/80 transition hover:border-lime-400/50 hover:bg-lime-400/10 hover:text-lime-300">
+        {clubName}
+      </summary>
+
+      <div className="absolute right-0 z-50 mt-3 max-h-[420px] w-[340px] overflow-y-auto rounded-3xl border border-lime-400/25 bg-[#050806] p-4 shadow-[0_0_45px_rgba(132,204,22,0.18)]">
+        <div className="mb-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-lime-400">
+            Rosa aggiornata
+          </p>
+          <h5 className="mt-1 text-lg font-black text-white">{clubName}</h5>
+        </div>
+
+        {roster.length ? (
+          <div className="space-y-2">
+            {roster.map((p: any) => (
+              <div
+                key={p.id}
+                className="rounded-2xl border border-white/10 bg-black/40 p-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-black text-white">{p.name || "Giocatore"}</p>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      {p.position || "N/D"} • {p.team || clubName}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-sm font-black text-lime-300">
+                    {p.overall || "N/D"}
+                  </div>
+                </div>
+
+                <p className="mt-2 text-xs text-zinc-500">
+                  Valore: {p.sold_price || 0} crediti
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-400">
+            Nessun giocatore assegnato a questa rosa.
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
+
 
 function Badge({
   children,
