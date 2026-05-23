@@ -2,6 +2,9 @@ import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 import AnalyticsTracker from "../components/AnalyticsTracker";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -62,11 +65,40 @@ function getClubForRegistration(item: any, clubs: any[] = []) {
   return club?.name || "";
 }
 
-function getRosterForRegistration(item: any, players: any[] = []) {
+function normalizeSiteText(value: any) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getRosterForRegistration(
+  item: any,
+  players: any[] = [],
+  realAssignments: any[] = []
+) {
   const discordId = normId(item.discord_id);
-  return players
+
+  const ownerRoster = players
     .filter((p) => normId(p.owner_discord_id) === discordId)
     .sort((a, b) => n(b.overall) - n(a.overall));
+
+  // Se il database non ha ancora assegnato correttamente tutta la rosa,
+  // usa come fallback il team reale salvato in real_team_assignments.
+  // Appena il bot assegna correttamente i giocatori, prevale owner_discord_id.
+  if (ownerRoster.length >= 10) return ownerRoster;
+
+  const assignment = realAssignments.find((r) => normId(r.discord_id) === discordId);
+  const realTeam = normalizeSiteText(assignment?.team_name);
+
+  if (!realTeam) return ownerRoster;
+
+  const fallbackRoster = players
+    .filter((p) => normalizeSiteText(p.team) === realTeam)
+    .sort((a, b) => n(b.overall) - n(a.overall));
+
+  return fallbackRoster.length > ownerRoster.length ? fallbackRoster : ownerRoster;
 }
 
 function mergeRecentRegistrations(
@@ -152,6 +184,10 @@ export default async function TorneoPage() {
 
   const { data: clubs } = await supabase
     .from("fc26_clubs")
+    .select("*");
+
+  const { data: realAssignments } = await supabase
+    .from("real_team_assignments")
     .select("*");
 
   const { data: players } = await supabase
@@ -506,7 +542,7 @@ export default async function TorneoPage() {
                       key={r.id}
                       className="group rounded-[1.5rem] border border-white/10 bg-black/30 p-5 transition hover:border-lime-400/50 hover:bg-lime-400/5"
                     >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex flex-col gap-4">
                         <div>
                           <h4 className="text-2xl font-black">
                             {r.discord_name || r.real_name || r.ea_id || r.game_id || "Player"}
@@ -525,7 +561,7 @@ export default async function TorneoPage() {
                           {getClubForRegistration(r, clubs || []) && (
                             <ClubRosterBadge
                               clubName={getClubForRegistration(r, clubs || [])}
-                              roster={getRosterForRegistration(r, players || [])}
+                              roster={getRosterForRegistration(r, players || [], realAssignments || [])}
                             />
                           )}
                         </div>
@@ -753,52 +789,82 @@ function ClubRosterBadge({
   clubName: string;
   roster: any[];
 }) {
+  const grouped = roster.reduce((acc: Record<string, any[]>, player: any) => {
+    const role = String(player.position || "ALTRO").toUpperCase();
+    const bucket =
+      ["GK", "POR"].includes(role) ? "Portieri" :
+      ["CB", "LB", "RB", "LWB", "RWB", "DC", "TS", "TD"].includes(role) ? "Difensori" :
+      ["CDM", "CM", "CAM", "LM", "RM", "CDC", "CC", "MCO"].includes(role) ? "Centrocampisti" :
+      ["ST", "CF", "LW", "RW", "LF", "RF", "ATT", "AS", "AD"].includes(role) ? "Attaccanti" :
+      "Altri";
+    acc[bucket] = acc[bucket] || [];
+    acc[bucket].push(player);
+    return acc;
+  }, {});
+
+  const order = ["Portieri", "Difensori", "Centrocampisti", "Attaccanti", "Altri"];
+
   return (
-    <details className="w-full md:w-auto">
-      <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/80 transition hover:border-lime-400/50 hover:bg-lime-400/10 hover:text-lime-300">
-        {clubName} • Rosa ({roster.length})
+    <details className="w-full">
+      <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-lime-400/40 bg-lime-400/10 px-4 py-2 text-sm font-black text-lime-300 transition hover:bg-lime-400 hover:text-black">
+        {clubName} · rosa completa ({roster.length})
       </summary>
 
-      <div className="mt-4 w-full rounded-3xl border border-lime-400/25 bg-[#050806] p-4 shadow-[0_0_45px_rgba(132,204,22,0.18)]">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="mt-5 w-full rounded-[1.5rem] border border-lime-400/25 bg-black/45 p-5 shadow-[0_0_35px_rgba(132,204,22,0.12)]">
+        <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-lime-400">
-              Rosa completa aggiornata
+            <p className="text-[10px] font-black uppercase tracking-[0.30em] text-lime-400">
+              Rosa aggiornata live
             </p>
-            <h5 className="mt-1 text-lg font-black text-white">{clubName}</h5>
+            <h5 className="mt-1 text-2xl font-black text-white">{clubName}</h5>
           </div>
-          <p className="text-sm font-black text-lime-300">
+          <div className="rounded-2xl border border-lime-400/25 bg-lime-400/10 px-4 py-2 text-sm font-black text-lime-300">
             {roster.length} giocatori
-          </p>
+          </div>
         </div>
 
         {roster.length ? (
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {roster.map((p: any) => (
-              <div
-                key={p.id}
-                className="rounded-2xl border border-white/10 bg-black/40 p-3"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-black text-white">{p.name || "Giocatore"}</p>
-                    <p className="mt-1 text-xs text-zinc-400">
-                      {p.position || "N/D"} • {p.team || clubName}
-                    </p>
-                  </div>
-                  <div className="shrink-0 rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-sm font-black text-lime-300">
-                    {p.overall || "N/D"}
+          <div className="space-y-5">
+            {order
+              .filter((group) => grouped[group]?.length)
+              .map((group) => (
+                <div key={group}>
+                  <p className="mb-3 text-xs font-black uppercase tracking-[0.25em] text-zinc-500">
+                    {group}
+                  </p>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                    {grouped[group].map((p: any) => (
+                      <div
+                        key={p.id}
+                        className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-lime-400/40 hover:bg-lime-400/5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-black text-white">
+                              {p.name || "Giocatore"}
+                            </p>
+                            <p className="mt-1 text-xs text-zinc-400">
+                              {p.position || "N/D"} · {p.team || clubName}
+                            </p>
+                          </div>
+
+                          <div className="shrink-0 rounded-xl bg-lime-400 px-3 py-2 text-sm font-black text-black">
+                            {p.overall || "N/D"}
+                          </div>
+                        </div>
+
+                        <p className="mt-3 text-xs text-zinc-500">
+                          Valore: <b className="text-zinc-300">{p.sold_price || 0}</b> crediti
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-
-                <p className="mt-2 text-xs text-zinc-500">
-                  Valore: {p.sold_price || 0} crediti
-                </p>
-              </div>
-            ))}
+              ))}
           </div>
         ) : (
-          <p className="text-sm text-zinc-400">
+          <p className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-zinc-400">
             Nessun giocatore assegnato a questa rosa.
           </p>
         )}
