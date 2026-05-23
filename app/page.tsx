@@ -39,7 +39,7 @@ const navItems = [
   ["HOME", "/"],
   ["Torneo", "/torneo"],
   ["Calcio", "/calcio"],
-  ["Gaming", "/gaming"],
+  ["Pro Club", "/proclub"],
   ["Discord", "https://discord.gg/racNPznyy9"],
 ];
 
@@ -57,10 +57,10 @@ const cards = [
     badge: "CALCIO",
   },
   {
-    title: "GAMING",
-    desc: "Videogiochi, esports, recensioni e contenuti community.",
+    title: "PRO CLUB",
+    desc: "FC Pro Club, team competitivi, tornei ed esperienza community.",
     visual: "from-violet-500/35 via-cyan-400/15 to-black",
-    badge: "GAMING",
+    badge: "PRO CLUB",
   },
 ];
 
@@ -126,7 +126,7 @@ export default function Home() {
               </h1>
 
               <p className="text-xs text-zinc-400">
-                Football • Gaming • Esports
+                Football • Pro Club • Esports
               </p>
 
               <a
