@@ -10,6 +10,34 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+
+async function fetchAllPlayersForRosters() {
+  const pageSize = 1000;
+  let from = 0;
+  let allPlayers: any[] = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, name, team, position, overall, owner_discord_id, sold_price")
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error("Errore caricamento players:", error.message);
+      break;
+    }
+
+    const batch = data || [];
+    allPlayers = [...allPlayers, ...batch];
+
+    if (batch.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return allPlayers;
+}
+
+
 function n(value: any) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -190,10 +218,7 @@ export default async function TorneoPage() {
     .from("real_team_assignments")
     .select("*");
 
-  const { data: players } = await supabase
-    .from("players")
-    .select("id, name, team, position, overall, owner_discord_id, sold_price")
-    .limit(10000);
+  const players = await fetchAllPlayersForRosters();
 
   const { data: auctions } = await supabase
     .from("auctions")
