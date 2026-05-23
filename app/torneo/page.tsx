@@ -156,7 +156,8 @@ export default async function TorneoPage() {
 
   const { data: players } = await supabase
     .from("players")
-    .select("id, name, team, position, overall, owner_discord_id, sold_price");
+    .select("id, name, team, position, overall, owner_discord_id, sold_price")
+    .limit(10000);
 
   const { data: auctions } = await supabase
     .from("auctions")
@@ -516,7 +517,7 @@ export default async function TorneoPage() {
                           </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-3 md:justify-end">
                           <Badge>{r.platform || "N/D"}</Badge>
                           <Badge className={statusClass(r.status)}>
                             {statusLabel(r.status)}
@@ -753,34 +754,39 @@ function ClubRosterBadge({
   roster: any[];
 }) {
   return (
-    <details className="relative">
+    <details className="w-full md:w-auto">
       <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/80 transition hover:border-lime-400/50 hover:bg-lime-400/10 hover:text-lime-300">
-        {clubName}
+        {clubName} • Rosa ({roster.length})
       </summary>
 
-      <div className="absolute right-0 z-50 mt-3 max-h-[420px] w-[340px] overflow-y-auto rounded-3xl border border-lime-400/25 bg-[#050806] p-4 shadow-[0_0_45px_rgba(132,204,22,0.18)]">
-        <div className="mb-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-lime-400">
-            Rosa aggiornata
+      <div className="mt-4 w-full rounded-3xl border border-lime-400/25 bg-[#050806] p-4 shadow-[0_0_45px_rgba(132,204,22,0.18)]">
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-lime-400">
+              Rosa completa aggiornata
+            </p>
+            <h5 className="mt-1 text-lg font-black text-white">{clubName}</h5>
+          </div>
+          <p className="text-sm font-black text-lime-300">
+            {roster.length} giocatori
           </p>
-          <h5 className="mt-1 text-lg font-black text-white">{clubName}</h5>
         </div>
 
         {roster.length ? (
-          <div className="space-y-2">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {roster.map((p: any) => (
               <div
                 key={p.id}
                 className="rounded-2xl border border-white/10 bg-black/40 p-3"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-black text-white">{p.name || "Giocatore"}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-black text-white">{p.name || "Giocatore"}</p>
                     <p className="mt-1 text-xs text-zinc-400">
                       {p.position || "N/D"} • {p.team || clubName}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-sm font-black text-lime-300">
+                  <div className="shrink-0 rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-sm font-black text-lime-300">
                     {p.overall || "N/D"}
                   </div>
                 </div>
@@ -800,7 +806,6 @@ function ClubRosterBadge({
     </details>
   );
 }
-
 
 function Badge({
   children,
