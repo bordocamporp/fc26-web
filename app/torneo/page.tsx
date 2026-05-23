@@ -835,7 +835,7 @@ function ClubRosterBadge({
         {clubName} · rosa completa ({roster.length})
       </summary>
 
-      <div className="mt-5 w-full rounded-[1.5rem] border border-lime-400/25 bg-black/45 p-5 shadow-[0_0_35px_rgba(132,204,22,0.12)]">
+      <div className="mt-5 w-full rounded-[1.5rem] border border-lime-400/25 bg-black/45 p-4 md:p-5 shadow-[0_0_35px_rgba(132,204,22,0.12)]">
         <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.30em] text-lime-400">
@@ -849,7 +849,7 @@ function ClubRosterBadge({
         </div>
 
         {roster.length ? (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {order
               .filter((group) => grouped[group]?.length)
               .map((group) => (
@@ -858,30 +858,31 @@ function ClubRosterBadge({
                     {group}
                   </p>
 
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                    {grouped[group].map((p: any) => (
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/35">
+                    {grouped[group].map((p: any, index: number) => (
                       <div
                         key={p.id}
-                        className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-lime-400/40 hover:bg-lime-400/5"
+                        className={`grid grid-cols-[1fr_auto] gap-3 px-4 py-3 transition hover:bg-lime-400/5 ${
+                          index !== grouped[group].length - 1 ? "border-b border-white/10" : ""
+                        }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-base font-black text-white">
-                              {p.name || "Giocatore"}
-                            </p>
-                            <p className="mt-1 text-xs text-zinc-400">
-                              {p.position || "N/D"} · {p.team || clubName}
-                            </p>
-                          </div>
-
-                          <div className="shrink-0 rounded-xl bg-lime-400 px-3 py-2 text-sm font-black text-black">
-                            {p.overall || "N/D"}
-                          </div>
+                        <div className="min-w-0">
+                          <p className="break-words text-base font-black leading-tight text-white">
+                            {p.name || "Giocatore"}
+                          </p>
+                          <p className="mt-1 text-xs font-bold text-zinc-400">
+                            {p.position || "N/D"} · {p.team || clubName}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            Valore: <b className="text-zinc-300">{p.sold_price || 0}</b> crediti
+                          </p>
                         </div>
 
-                        <p className="mt-3 text-xs text-zinc-500">
-                          Valore: <b className="text-zinc-300">{p.sold_price || 0}</b> crediti
-                        </p>
+                        <div className="flex items-start">
+                          <span className="rounded-xl bg-lime-400 px-3 py-2 text-sm font-black text-black">
+                            OVR {p.overall || "N/D"}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
