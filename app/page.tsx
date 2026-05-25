@@ -39,7 +39,7 @@ const navItems = [
   ["HOME", "/"],
   ["Torneo", "/torneo"],
   ["Calcio", "/calcio"],
-  ["Pro Club", "/proclub"],
+  ["Pro Club", "https://discord.gg/suRj5EgZVq"],
   ["Discord", "https://discord.gg/racNPznyy9"],
 ];
 
